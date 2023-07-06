@@ -53,6 +53,7 @@ public class ptx_inter {
   
   toggle togUI;
   String strUI;
+  int[] colUI = {255, 255, 255};
 
   cam myCam;
   ptx myPtx;
@@ -97,7 +98,6 @@ public class ptx_inter {
     togUI = new toggle();
     togUI.setSpanS(1);
     strUI = "";
-    
     
     shiftPressed = false;
 
@@ -253,11 +253,11 @@ public class ptx_inter {
     if(togUI.getState()) {
         // UI high level
         if(myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE) { // display UI directly on screen   
-          fill(255, 255, 255);     
+          fill(colUI[0], colUI[1], colUI[2]);     
           textAlign(CENTER);
           text(strUI, width/2, height/2 - 100); 
         } else { // display UI in FBO
-          mFbo.fill(255, 255, 255);     
+          mFbo.fill(colUI[0], colUI[1], colUI[2]);     
           mFbo.textAlign(CENTER);
           mFbo.text(strUI, myPtxInter.mFbo.width/2, myPtxInter.mFbo.height/2 - 100);
         }
@@ -269,6 +269,27 @@ public class ptx_inter {
 
     if (! (myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE) || isScanning ) {
         displayFBO();
+    }
+
+  }
+
+  void postGameDraw() {
+
+    mFbo.textFont(fDef); textFont(fGlob);
+    mFbo.textSize(28);   textSize(28);
+    if(togUI.getState()) {
+        // UI high level
+        if(myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE) { // display UI directly on screen   
+          fill(colUI[0], colUI[1], colUI[2]);     
+          textAlign(CENTER);
+          text(strUI, width/2, height/2 - 100); 
+        } else { // display UI in FBO
+          mFbo.fill(colUI[0], colUI[1], colUI[2]);     
+          mFbo.textAlign(CENTER);
+          mFbo.text(strUI, myPtxInter.mFbo.width/2, myPtxInter.mFbo.height/2 - 100);
+        }
+    } else {
+        togUI.stop(false); 
     }
 
   }
@@ -342,7 +363,7 @@ public class ptx_inter {
       
       scale(myCam.zoomCamera);
       image(myCam.mImg, 0, 0);
-      strokeWeight(2);
+      strokeWeight(2/myCam.zoomCamera);
       stroke(255, 130);
       noFill();
       beginShape();
@@ -354,19 +375,20 @@ public class ptx_inter {
       
       
       if(myCam.dotIndex != -1) {
+        float radius = 20/myCam.zoomCamera;
         stroke(255, 200);
-        ellipse(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y, 20, 20);
-        ellipse(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y, 40, 40);
+        ellipse(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y, radius, radius);
+        ellipse(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y, 2*radius, 2*radius);
         stroke(255, 50);
-        line(myCam.ROI[myCam.dotIndex].x - 20, myCam.ROI[myCam.dotIndex].y, myCam.ROI[myCam.dotIndex].x + 20, myCam.ROI[myCam.dotIndex].y);
-        line(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y - 20, myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y + 20);
+        line(myCam.ROI[myCam.dotIndex].x - radius, myCam.ROI[myCam.dotIndex].y, myCam.ROI[myCam.dotIndex].x + radius, myCam.ROI[myCam.dotIndex].y);
+        line(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y - radius, myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y + radius);
       }
       
       
       if (debugType != 0) {
         pushStyle();
           fill(255,130);
-          textSize(18);
+          textSize(18/myCam.zoomCamera);
           textAlign(CENTER);
           if(myCam.ROI[0].x < myCam.ROI[2].x) // comparison with oposite point, to check if on the left side of the picture, for offset value
             text( "TopLeft", myCam.ROI[0].x - 50, myCam.ROI[0].y);
@@ -662,6 +684,20 @@ public class ptx_inter {
       mFbo.endShape();
     }
   }
+
+  /**
+  * Helper function to display short text for a while on the screen
+  *
+  */
+
+  void notify(String _str, int _r, int _g, int _b) {
+      strUI = _str;
+      colUI[0] = _r;
+      colUI[1] = _g;
+      colUI[2] = _b;
+      togUI.reset(true);     
+  }
+
 
   /** 
    * Helper function to display some of the most often needed
@@ -1033,9 +1069,9 @@ public class ptx_inter {
 
     switch(key) {
     //Save/Load Config
-    case 'w': saveConfig("data/config.json"); strUI = "Config Saved!"; togUI.reset(true); break;
-    case 'x': loadConfig("data/config.json"); strUI = "Config Loaded!"; togUI.reset(true); break;
-    case 'X': loadConfig("data/config_ref_1.json"); strUI = "Config Loaded!"; togUI.reset(true); break;
+    case 'w': saveConfig("data/config.json"); notify("Config Saved!", 255, 255, 255); break;
+    case 'x': loadConfig("data/config.json"); notify("Config Loaded!", 255, 255, 255); break;
+    case 'X': loadConfig("data/config_ref_1.json"); notify("Config Loaded!", 255, 255, 255); break;
 
     case 'A': case 'a':
       if(key == 'a') myPtx.seuilValue  = Math.max(  0.f, myPtx.seuilValue + 1);

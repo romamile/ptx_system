@@ -103,7 +103,8 @@ public class cam {
     mImgFilter = createImage(wFbo, hFbo, RGB);
     mImgRez    = createImage(wFbo, hFbo, RGB);
 
-    zoomCamera = 1;
+    zoomCamera = min(width*1.f/wFbo, height*1.f/hFbo);
+
     dotIndex = -1;
     ROI[0] = new vec2f(200, 200);
     ROI[1] = new vec2f(400, 200);
@@ -134,6 +135,7 @@ public class cam {
 
     wFbo = _wFbo;
     hFbo = _hFbo;
+    zoomCamera = min(width*1.f/wFbo, height*1.f/hFbo);
 
     mImgCroped = createImage(wFbo, hFbo, RGB);
     mImgFilter = createImage(wFbo, hFbo, RGB);
@@ -161,11 +163,19 @@ public class cam {
       camStr = cameras[_idCam];
       camId = _idCam;
       
+           //tmp mod for brio cam
+      String camStrv2 = "";
+      if(camStr.length() > 5)
+        camStrv2 = camStr.substring(0,camStr.length()-4);
+      else 
+        camStrv2 = camStr;
+      
+      
       // Get the correct video id from the camera
       ArrayList<String> listCamStr = exeMult("v4l2-ctl --list-device");
       
       for (int i = 0; i < listCamStr.size(); ++i) {
-        if(listCamStr.get(i).contains(camStr) && i < listCamStr.size() - 1) {
+        if(listCamStr.get(i).contains(camStrv2) && i < listCamStr.size() - 1) {
           camVideoId = Integer.parseInt( split(listCamStr.get(i+1), "/dev/video")[1] );
           break;
         }
