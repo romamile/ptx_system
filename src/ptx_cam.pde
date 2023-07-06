@@ -163,7 +163,7 @@ public class cam {
       camStr = cameras[_idCam];
       camId = _idCam;
       
-           //tmp mod for brio cam
+        //tmp mod for brio cam
       String camStrv2 = "";
       if(camStr.length() > 5)
         camStrv2 = camStr.substring(0,camStr.length()-4);
@@ -173,6 +173,7 @@ public class cam {
       
       // Get the correct video id from the camera
       ArrayList<String> listCamStr = exeMult("v4l2-ctl --list-device");
+      
       
       for (int i = 0; i < listCamStr.size(); ++i) {
         if(listCamStr.get(i).contains(camStrv2) && i < listCamStr.size() - 1) {
