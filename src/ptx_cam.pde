@@ -37,6 +37,7 @@ public class cam {
   int camVideoId, camId;
 
   boolean hasImage, isFiltered, isRecognised;
+  boolean isBrio;
 
   PImage mImg;          // Whole image
   PImage mImgCroped;    // Image with trapeze done
@@ -90,6 +91,7 @@ public class cam {
 
   cam(int _w, int _h) {
 
+		isBrio = false;
     wCam = 0;
     hCam = 0;
 
@@ -119,6 +121,8 @@ public class cam {
     } else {
       println("Available cameras:");
       for (int i = 0; i < cameras.length; i++) {
+				if(cameras[i].contains("BRIO"))
+					isBrio = true;
         println(i + ", " + cameras[i]);
       }
     }
@@ -158,12 +162,17 @@ public class cam {
     if (cameras.length == 0)
       return;
 
+		for (int i = 0; i < cameras.length; i++) {
+			if(cameras[i].contains("BRIO"))
+				isBrio = true;
+		}
+
     if (_idCam < cameras.length) {
       println("FOUND GOOD CAM");
       camStr = cameras[_idCam];
       camId = _idCam;
       
-        //tmp mod for brio cam
+           //tmp mod for brio cam
       String camStrv2 = "";
       if(camStr.length() > 5)
         camStrv2 = camStr.substring(0,camStr.length()-4);
@@ -173,7 +182,6 @@ public class cam {
       
       // Get the correct video id from the camera
       ArrayList<String> listCamStr = exeMult("v4l2-ctl --list-device");
-      
       
       for (int i = 0; i < listCamStr.size(); ++i) {
         if(listCamStr.get(i).contains(camStrv2) && i < listCamStr.size() - 1) {
@@ -219,8 +227,11 @@ public class cam {
   void loadCamConfig() {
     
     JSONObject json = loadJSONObject("data/config.json");
-
-    modCam("set", "exposure_absolute", floor(json.getFloat("cam_exposure")) );
+		if(isBrio) {
+			modCam("set", "exposure_time_absolute", floor(json.getFloat("cam_exposure")) );
+		} else {
+			modCam("set", "exposure_absolute", floor(json.getFloat("cam_exposure")) );
+		}
     modCam("set", "saturation", floor(json.getFloat("cam_saturation")) );
     modCam("set", "brightness", floor(json.getFloat("cam_brightness")) );
     modCam("set", "contrast", floor(json.getFloat("cam_contrast")) );
@@ -320,11 +331,19 @@ public class cam {
   void switchToManual() {
     if (  System.getProperty ("os.name").contains("Linux") ) {
 
-      exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl white_balance_temperature_auto=0");
-      exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl exposure_auto_priority=0");
       exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl focus_auto=0");
-      exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl exposure_auto=1");
       exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl gain=0");
+      
+			if(isBrio) {
+      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl white_balance_automatic=0");
+      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl auto_exposure=1");
+      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl exposure_dynamic_framerate=0");
+			} else {
+      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl white_balance_temperature_auto=0");
+      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl exposure_auto=1");
+      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl exposure_auto_priority=0");
+			}
+     
     }
   }
 
@@ -375,7 +394,7 @@ public class cam {
     return rezStr;
   }
   
-    ArrayList<String> exeMult(String cmd) {
+  ArrayList<String> exeMult(String cmd) {
     
     String returnedValues = "";
     ArrayList<String> rezStr = new ArrayList<String>();

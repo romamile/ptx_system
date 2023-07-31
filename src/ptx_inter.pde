@@ -69,6 +69,10 @@ public class ptx_inter {
   boolean withFlash;
   boolean savePicture;
 
+  // Thread
+  boolean withThread, postThreadAtScanNeeded;
+  boolean launchThread;
+  toggle toggleThread;
 
   // Frame Buffer Object
   int wFrameFbo, hFrameFbo;
@@ -99,6 +103,9 @@ public class ptx_inter {
     togUI.setSpanS(1);
     strUI = "";
     
+    toggleThread = new toggle();
+    toggleThread.setSpanMs(1000);
+    
     shiftPressed = false;
 
     
@@ -116,6 +123,9 @@ public class ptx_inter {
     grayLevelDown = 126;
     marginFlash = 5;
     withFlash = false;
+    withThread = false;
+    launchThread = false;
+    postThreadAtScanNeeded = false;
     savePicture = false;
 
     fIndex = -1;
@@ -706,12 +716,19 @@ public class ptx_inter {
   void displayDebugIntel() {
 
     //Values
+    String debugExposure = "";
+    if(myCam.isBrio) {
+      debugExposure = " d  - Exposure  : " + myCam.modCam("get", "exposure_time_absolute", 0)  + "\n";
+    } else {
+      debugExposure = " d  - Exposure    : " + myCam.modCam("get", "exposure_absolute", 0) + "\n";
+
+    }
     String debugStr = "--- \n"
       + " a  - Luminance: " + myPtx.seuilValue + "\n"
       + " z  - Saturation: " + int(100*myPtx.seuilSaturation)/100.0 + "\n"
       + "e/r - GrayTop & Down: "  + grayLevelUp + " / " + grayLevelDown + "\n"
       + "--- Camera\n"
-      + " d  - Exposure    : " + myCam.modCam("get", "exposure_absolute", 0) + "\n"
+      + debugExposure
       + " f  - Saturation  : " + myCam.modCam("get", "saturation", 0)  + "\n"
       + " g  - Brightness  : " + myCam.modCam("get", "brightness", 0) + "\n"
       + " h  - Contrast    : " + myCam.modCam("get", "contrast", 0) + "\n"
@@ -811,6 +828,7 @@ public class ptx_inter {
     json.setInt("grayLevelDown", grayLevelDown);
     json.setInt("marginFlash", marginFlash);
     json.setInt("withFlash", withFlash ? 1 : 0);
+    json.setInt("withThread", withThread ? 1 : 0);
     json.setInt("savePicture", savePicture ? 1 : 0);
 
     json.setInt("redMin", myPtx.listZone.get(0).getMin());
@@ -844,7 +862,11 @@ public class ptx_inter {
     json.setInt("wCam", myCam.cpt.width);
     json.setInt("hCam", myCam.cpt.height);
 
-    json.setInt("cam_exposure", myCam.modCam("get", "exposure_absolute", 0) );
+    if(myCam.isBrio) {
+      json.setInt("cam_exposure", myCam.modCam("get", "exposure_time_absolute", 0) );
+    } else {
+      json.setInt("cam_exposure", myCam.modCam("get", "exposure_absolute", 0) );
+    }
     json.setInt("cam_saturation", myCam.modCam("get", "saturation", 0) );
     json.setInt("cam_brightness", myCam.modCam("get", "brightness", 0) );
     json.setInt("cam_contrast", myCam.modCam("get", "contrast", 0) );
@@ -871,6 +893,7 @@ public class ptx_inter {
     grayLevelDown = json.getInt("grayLevelDown");
     marginFlash = json.getInt("marginFlash");
     withFlash = json.getInt("withFlash") == 1;
+    withThread = json.getInt("withThread") == 1;
     savePicture = json.getInt("savePicture") == 1;
 
     int redMin, redMax, greenMin, greenMax, blueMin, blueMax, yellowMin, yellowMax, backMin, backMax;
@@ -919,7 +942,12 @@ public class ptx_inter {
 
     idCam = loadJSONObject(_filePath).getInt("idCam");
     
-    myCam.modCam("set", "exposure_absolute", floor(json.getFloat("cam_exposure")) );
+    if(myCam.isBrio) {
+      myCam.modCam("set", "exposure_time_absolute", floor(json.getFloat("cam_exposure")) );
+    } else {
+      myCam.modCam("set", "exposure_absolute", floor(json.getFloat("cam_exposure")) );
+    }
+
     myCam.modCam("set", "saturation", floor(json.getFloat("cam_saturation")) );
     myCam.modCam("set", "brightness", floor(json.getFloat("cam_brightness")) );
     myCam.modCam("set", "contrast", floor(json.getFloat("cam_contrast")) );
@@ -1091,9 +1119,22 @@ public class ptx_inter {
     case 'e': grayLevelUp  = Math.min(255, grayLevelUp +3);    break;
     case 'R': grayLevelDown = Math.max(  0, grayLevelDown -3); break;
     case 'r': grayLevelDown = Math.min(255, grayLevelDown +3); break;
-      
-    case 'd': myCam.modCam("add", "exposure_absolute",  10); myCam.update(); break;
-    case 'D': myCam.modCam("add", "exposure_absolute", -10); myCam.update(); break;
+    case 'd': 
+      if(myCam.isBrio) {
+        myCam.modCam("add", "exposure_time_absolute",  10);
+      } else {
+        myCam.modCam("add", "exposure_absolute",  10);
+      }
+      myCam.update();
+      break;
+    case 'D': 
+      if(myCam.isBrio) {
+        myCam.modCam("add", "exposure_time_absolute",  -10);
+      } else {
+        myCam.modCam("add", "exposure_absolute",  -10);
+      }
+      myCam.update();
+      break;
     case 'f': myCam.modCam("add", "saturation",  2);         myCam.update(); break;
     case 'F': myCam.modCam("add", "saturation", -2);         myCam.update(); break;
     case 'g': myCam.modCam("add", "brightness",  2);         myCam.update(); break;
