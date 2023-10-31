@@ -35,6 +35,7 @@ class toggle {
     update(); 
     return 0.001*millis() - (ref + span*phase);
   }
+
   float getTickVal() { 
     if (!active) return -1; 
     update(); 
@@ -62,6 +63,19 @@ class toggle {
     update(); 
     return getTickVal() < 0.5  ? 1 : 0;
   }
+  
+  float getSquare(float _val) { 
+    update(); 
+    return getTickVal(_val) < 0.5  ? 1 : 0;
+  }
+
+  float getTickVal(float _val) { 
+    if (!active) return -1; 
+    update(); 
+    float rezTmp = (0.001*millis()*_val - ref + span*phase) / span;
+    return rezTmp - floor(rezTmp);
+  }
+
   float getOscil() { 
     update(); 
     return ( cos( getTickVal() *2*3.141592) + 1 ) / 2;

@@ -95,7 +95,7 @@ public class ptx_inter {
     fGlob = createFont("./data/MonospaceTypewriter.ttf", 28);
     debugType = 1;
     togUI = new toggle();
-    togUI.setSpanS(1);
+    togUI.setSpanS(3);
     strUI = "";
     
     
@@ -107,7 +107,7 @@ public class ptx_inter {
 //    wFrameFbo = int(hFrameFbo * ratioFbo);
 
     wFrameFbo = 1280;
-    hFrameFbo = 720;
+    hFrameFbo = 800;
 
     myPtx = new ptx();
     myCam = new cam();
@@ -249,13 +249,29 @@ public class ptx_inter {
     if ((debugType == 2 || debugType == 3) && !isScanning)
       displayDebugIntel();
       
-      
+    showNotification();
+     
+    mFbo.endDraw();
+
+    if (! (myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE) || isScanning ) {
+        displayFBO();
+    }
+
+  }
+  
+  void showNotification() {
+    mFbo.textFont(fDef); textFont(fGlob);
+    mFbo.textSize(28);   textSize(28);
+    mFbo.fill(255);
+    mFbo.textAlign(LEFT);
+    
     if(togUI.getState()) {
         // UI high level
+        
         if(myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE) { // display UI directly on screen   
           fill(255, 255, 255);     
           textAlign(CENTER);
-          text(strUI, width/2, height/2 - 100); 
+          text(strUI, width/2, height/2 - 100);           
         } else { // display UI in FBO
           mFbo.fill(255, 255, 255);     
           mFbo.textAlign(CENTER);
@@ -263,14 +279,7 @@ public class ptx_inter {
         }
     } else {
         togUI.stop(false); 
-    }
-
-    mFbo.endDraw();
-
-    if (! (myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE) || isScanning ) {
-        displayFBO();
-    }
-
+    } 
   }
 
   /** 
@@ -967,41 +976,14 @@ public class ptx_inter {
       break;
     
     case (KeyEvent.VK_F6-15):
-    
-      // 1) get list of file in directory
-      String fPath = sketchPath() + "/F6_game_station";
-      ArrayList<String> listFileStr = myCam.exeMult("ls "+fPath);
-//      for(int i = 0; i<listFileStr.size(); ++i) println(listFileStr.get(i));
-
-      // 2) select the "next one"
-      fIndex = (fIndex + 1)%listFileStr.size();
-      fName = listFileStr.get(fIndex);
-      String filePath = "./F6_game_station/" + fName;
-
-      if(shiftPressed) {
-				filePath = "./drawings/" + fName;
-        myCam.mImgCroped.save("./drawings/img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
-      } else {
-      	filePath = "./F6_game_station/" + fName;
-      }
-      // 3) launch
-      myCam.mImgCroped = loadImage(filePath);
-  
-      myCam.mImgFilter.copy(myPtxInter.myCam.mImgCroped, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo);
-      myCam.mImgRez.copy(myPtxInter.myCam.mImgCroped, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo);
-      myCam.mImgCroped = createImage(myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, RGB);
-      myCam.mImgCroped.copy(myPtxInter.myCam.mImgFilter, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo);
-  
-      scanClr();
-      atScan();
-      println(fName);
+      loadFromGameStation();
       break;
 
     case (KeyEvent.VK_F7-15):
       if(shiftPressed) {
         myCam.mImgCroped.save("./drawings/img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
       } else {
-        myCam.mImgCroped.save("./F6_game_station/img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
+        saveToGameStation();
       }
       break;
 
@@ -1101,4 +1083,48 @@ public class ptx_inter {
       break;
     }
   }
+  
+  // GAME STATION
+  
+  void loadFromGameStation() {
+    // 1) get list of file in directory
+    String fPath = sketchPath() + "/F6_game_station";
+    ArrayList<String> listFileStr = myCam.exeMult("ls "+fPath);
+//      for(int i = 0; i<listFileStr.size(); ++i) println(listFileStr.get(i));
+
+    // 2) select the "next one"
+    fIndex = (fIndex + 1)%listFileStr.size();
+    fName = listFileStr.get(fIndex);
+    String filePath = "./F6_game_station/" + fName;
+
+//      if(shiftPressed) {
+//        filePath = "./drawings/" + fName;
+//        myCam.mImgCroped.save("./drawings/img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
+//      } else {
+      filePath = "./F6_game_station/" + fName;
+//      }
+    // 3) launch
+    myCam.mImgCroped = loadImage(filePath);
+
+    myCam.mImgFilter.copy(myPtxInter.myCam.mImgCroped, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo);
+    myCam.mImgRez.copy(myPtxInter.myCam.mImgCroped, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo);
+    myCam.mImgCroped = createImage(myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, RGB);
+    myCam.mImgCroped.copy(myPtxInter.myCam.mImgFilter, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo);
+
+    scanClr();
+    atScan();
+    println(fName);
+ 
+    strUI = "Loaded -=" + fName + " =- from GameStation!";
+    togUI.reset(true);
+
+  }
+  
+  void saveToGameStation() {
+    myCam.mImgCroped.save("./F6_game_station/img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
+    
+    strUI = "Saved to GameStation!";
+    togUI.reset(true);
+  }
+  
 }
