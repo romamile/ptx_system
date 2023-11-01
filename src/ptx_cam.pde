@@ -35,6 +35,7 @@ public class cam {
   Capture cpt;
   String camStr;
   int camVideoId, camId;
+  boolean withCamera;
 
   boolean hasImage, isFiltered, isRecognised;
   boolean isBrio;
@@ -54,8 +55,9 @@ public class cam {
   int dotIndex; // 0->3 & -1 == no editing
   float zoomCamera;
 
-  cam() {
+  cam(boolean _withCamera) {
 
+    withCamera = _withCamera;
     wFbo = 1000;
     hFbo = 1000;
     camVideoId = -1;
@@ -76,7 +78,9 @@ public class cam {
     ROI[2] = new vec2f(400, 400);
     ROI[3] = new vec2f(200, 400);
 
-
+    if(!withCamera)
+      return;
+      
     String[] cameras = Capture.list();
     if (cameras.length == 0) {
       println("There are no cameras available for capture.");
@@ -88,9 +92,10 @@ public class cam {
       }
     }
   }  
-
+/*
   cam(int _w, int _h) {
 
+    withCamera = true;
 		isBrio = false;
     wCam = 0;
     hCam = 0;
@@ -128,7 +133,7 @@ public class cam {
     }
     
   }
-
+*/
   /** 
    * Functions that let the user resize the fbo which defines the 
    * playfield.
@@ -155,7 +160,12 @@ public class cam {
    for instancing the Capture class
    */
   void startFromId(int _idCam, int _wwCam, int _hhCam, PApplet _myGrandParent) {
-
+    wCam = _wwCam;
+    hCam = _hhCam;
+    
+    if(!withCamera)
+      return;
+    
     // 1) Select the camera 
     String[] cameras = Capture.list();
   
@@ -225,7 +235,10 @@ public class cam {
   }
 
   void loadCamConfig() {
-    
+      
+    if(!withCamera)
+      return;
+
     JSONObject json = loadJSONObject("data/config.json");
 		if(isBrio) {
 			modCam("set", "exposure_time_absolute", floor(json.getFloat("cam_exposure")) );
@@ -245,6 +258,9 @@ public class cam {
    */
   boolean update() {
     
+    if(!withCamera)
+      return true;
+
     if (camVideoId == -1)
       return true;
 
@@ -301,6 +317,10 @@ public class cam {
   }
 
   int modCam(String _action, String _param, int _val) {
+
+    if(!withCamera)
+      return -999;
+
     if (  System.getProperty ("os.name").contains("Linux") ) {
       String setCmd = "v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl ";
       String getCmd = "v4l2-ctl -d /dev/video"+camVideoId+" --get-ctrl ";
@@ -310,7 +330,7 @@ public class cam {
         println("Camera doesn't have the parametre " + _param);
         return -1;
       }
-        
+
       int paramVal = Integer.parseInt( split(paramStr, ' ')[1] );
       
       if(_action.equals("add")) {

@@ -117,7 +117,6 @@ public class ptx_inter {
     hFrameFbo = 800;
 
     myPtx = new ptx();
-    myCam = new cam();
 
     grayLevelUp   = 126;
     grayLevelDown = 126;
@@ -140,10 +139,18 @@ public class ptx_inter {
     idCam = loadJSONObject("data/config.json").getInt("idCam");
     int wCam = loadJSONObject("data/config.json").getInt("wCam");
     int hCam = loadJSONObject("data/config.json").getInt("hCam");
+    boolean withCam = loadJSONObject("data/config.json").getInt("withCamera") != 0;
 
-    mFbo = createGraphics(wFrameFbo, hFrameFbo, P3D);
-    myCam.resize(wFrameFbo, hFrameFbo);
+    if(withCam) {
+      println("WITH CAMERA");
+    } else  {
+      println("WITHOUT CAMERA");
+    }
     
+    mFbo = createGraphics(wFrameFbo, hFrameFbo, P3D);
+    
+    myCam = new cam(withCam);
+    myCam.resize(wFrameFbo, hFrameFbo);
     myCam.startFromId(idCam, wCam, hCam, _myParent);
 
     // Load configuration file
@@ -868,8 +875,9 @@ public class ptx_inter {
     json.setInt("seuil_smallArea", myPtx.seuil_smallArea);
 
     json.setInt("idCam", idCam);
-    json.setInt("wCam", myCam.cpt.width);
-    json.setInt("hCam", myCam.cpt.height);
+    json.setInt("wCam", myCam.wCam);
+    json.setInt("hCam", myCam.hCam);
+    json.setInt("withCamera", myCam.withCamera ? 1 : 0);
 
     if(myCam.isBrio) {
       json.setInt("cam_exposure", myCam.modCam("get", "exposure_time_absolute", 0) );
