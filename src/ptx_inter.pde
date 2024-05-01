@@ -41,6 +41,9 @@ public enum cameraState { CAMERA_WHOLE, CAMERA_ROI };
 
 public class ptx_inter {
 
+	// Version
+	String[] version = {"0","8","0"};
+	String[] versionExp = {"1","0","0", "Exp"};
 
   // The states
   globState myGlobState;  
@@ -869,6 +872,12 @@ public class ptx_inter {
 
     mFbo.image(imgTuto, wFrameFbo / 2 - 550*0.9, hFrameFbo / 2 - 340.f, imgTuto.width, imgTuto.height);
 
+		// Version
+    mFbo.textFont(fDef);
+		mFbo.textSize(22);
+		mFbo.text("PTX system - v" + version[0] + "." + version[1] + "." + version[2], 20, hFrameFbo - 30);
+
+		mFbo.text(versionExp[3] + " - v" + versionExp[0]+ "." + versionExp[1] + "." + versionExp[2], 20, hFrameFbo - 70);
   }
 
   /** 
