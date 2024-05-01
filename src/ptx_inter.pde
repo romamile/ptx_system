@@ -872,7 +872,6 @@ public class ptx_inter {
     //TEMP, quand supprimer, ne pas oublier de retirer la virgule juste au dessus
     json.setFloat("seuil_ratioSurfacePerimetre", myPtx.seuil_ratioSurfacePerimetre);
     json.setFloat("seuil_tailleSurface", myPtx.seuil_tailleSurface);
-    json.setInt("seuil_smallArea", myPtx.seuil_smallArea);
 
     json.setInt("idCam", idCam);
     json.setInt("wCam", myCam.wCam);
@@ -954,7 +953,6 @@ public class ptx_inter {
     //TEMP, quand supprimer, ne pas oublier de retirer la virgule juste au dessus
     myPtx.seuil_ratioSurfacePerimetre = json.getFloat("seuil_ratioSurfacePerimetre");
     myPtx.seuil_tailleSurface = json.getFloat("seuil_tailleSurface");
-    myPtx.seuil_smallArea = json.getInt("seuil_smallArea");
 
 
     idCam = loadJSONObject(_filePath).getInt("idCam");
@@ -1174,19 +1172,29 @@ public class ptx_inter {
   void loadFromGameStation() {
     // 1) get list of file in directory
     String fPath = sketchPath() + "/F6_game_station";
-    ArrayList<String> listFileStr = myCam.exeMult("ls "+fPath);
+    //ArrayList<String> listFileStr = myCam.exeMult("ls "+fPath);
+    //fIndex = (fIndex + 1)%listFileStr.size();
+    //fName = listFileStr.get(fIndex);
+//    String filePath = "./F6_game_station/" + fName;
+
+      
+    File folder = new File(fPath);
+    File[] files = folder.listFiles();
+      
+  
+    fIndex = (fIndex + 1)%files.length;
+    fName = files[fIndex].toString();
+
 //      for(int i = 0; i<listFileStr.size(); ++i) println(listFileStr.get(i));
 
     // 2) select the "next one"
-    fIndex = (fIndex + 1)%listFileStr.size();
-    fName = listFileStr.get(fIndex);
-    String filePath = "./F6_game_station/" + fName;
+    String filePath = fName;
 
 //      if(shiftPressed) {
-//        filePath = "./drawings/" + fName;
+//        filePath = fName;
 //        myCam.mImgCroped.save("./drawings/img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
 //      } else {
-      filePath = "./F6_game_station/" + fName;
+      filePath = fName;
 //      }
     // 3) launch
     myCam.mImgCroped = loadImage(filePath);

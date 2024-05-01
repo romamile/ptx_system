@@ -173,8 +173,11 @@ public class cam {
       return;
 
 		for (int i = 0; i < cameras.length; i++) {
-			if(cameras[i].contains("BRIO"))
-				isBrio = true;
+      println("" + i + " => " + cameras[i]);
+      if(cameras[i].contains("BRIO"))
+        isBrio = true;
+      if(cameras[i].contains("Logi 4K Stream"))
+        isBrio = true;
 		}
 
     if (_idCam < cameras.length) {

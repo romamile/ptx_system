@@ -1,4 +1,4 @@
-/* //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>//
+/* //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>//
  *  This file is part of the PTX library.
  *
  *  The PTX library is free software: you can redistribute it and/or modify
@@ -74,7 +74,6 @@ public class ptx {
   // TEMP
   public float seuil_ratioSurfacePerimetre;
   public float seuil_tailleSurface;
-  public int seuil_smallArea;
 
   public ptx() {
 
@@ -122,9 +121,8 @@ public class ptx {
     // TEMP
     seuil_ratioSurfacePerimetre = 1.3;
     seuil_tailleSurface = 400;
-    seuil_smallArea = 200;
   }
- //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>//
+ //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>//
   
   /** 
    * Main function that calls other sub function in order to
