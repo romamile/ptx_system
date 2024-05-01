@@ -34,7 +34,7 @@ import java.io.InputStreamReader;
 public class cam {
   Capture cpt;
   String camStr;
-  int camVideoId, camId;
+  int camVideoId, id;
   boolean withCamera;
 
   boolean hasImage, isFiltered, isRecognised;
@@ -183,7 +183,7 @@ public class cam {
     if (_idCam < cameras.length) {
       println("FOUND GOOD CAM");
       camStr = cameras[_idCam];
-      camId = _idCam;
+      id = _idCam;
       
            //tmp mod for brio cam
       String camStrv2 = "";
@@ -206,7 +206,7 @@ public class cam {
     } else {
       println("DEFAULT CAM");
       camStr = cameras[0];
-      camId = 0;
+      id = 0;
       camVideoId = 0;
     }
 
@@ -230,9 +230,8 @@ public class cam {
     hCam = cpt.height;
     mImg = createImage(wCam, hCam, RGB);
 
-    parametriseCamera();
     loadCamConfig();
-    switchToManual();
+
     update();
     update();
   }
@@ -241,18 +240,37 @@ public class cam {
       
     if(!withCamera)
       return;
+    JSONObject camConfig = loadJSONObject("data/config.json").getJSONObject("camera"); 
 
-    JSONObject json = loadJSONObject("data/config.json");
 		if(isBrio) {
-			modCam("set", "exposure_time_absolute", floor(json.getFloat("cam_exposure")) );
+			modCam("set", "exposure_time_absolute", floor(camConfig.getFloat("exposure")) );
 		} else {
-			modCam("set", "exposure_absolute", floor(json.getFloat("cam_exposure")) );
+			modCam("set", "exposure_absolute", floor(camConfig.getFloat("exposure")) );
 		}
-    modCam("set", "saturation", floor(json.getFloat("cam_saturation")) );
-    modCam("set", "brightness", floor(json.getFloat("cam_brightness")) );
-    modCam("set", "contrast", floor(json.getFloat("cam_contrast")) );
-    modCam("set", "white_balance_temperature", floor(json.getFloat("cam_temperature")) );  
-    
+
+    modCam("set", "saturation", floor(camConfig.getFloat("saturation")) );
+    modCam("set", "brightness", floor(camConfig.getFloat("brightness")) );
+    modCam("set", "contrast", floor(camConfig.getFloat("contrast")) );
+    modCam("set", "white_balance_temperature", floor(camConfig.getFloat("temperature")) );  
+
+
+		// Putting stuff in manual (no auto controls)
+    modCam("set", "white_balance_temperature_auto", 0);
+    modCam("set", "exposure_auto_priority", 0);
+    modCam("set", "focus_auto", 0);
+    modCam("set", "exposure_auto", 0);
+    modCam("set", "gain", 0);
+
+		if(isBrio) {
+			modCam("set", "white_balance_automatic", 0);
+			modCam("set", "auto_exposure", 1);
+			modCam("set", "exposure_dynamic_framerate", 0);
+		} else {
+			modCam("set", "white_balance_temperature_auto", 0);
+			modCam("set", "exposure_auto", 1);
+			modCam("set", "exposure_auto_priority", 0);
+		}
+ 
   }
   
   /** 
@@ -303,22 +321,6 @@ public class cam {
   }
 
 
-  /** 
-   * Function that setup camera
-   */
-  void parametriseCamera() {
-    if (  System.getProperty ("os.name") == "Linux") {
-      String setCmd = "v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl ";
-      String getCmd = "v4l2-ctl -d /dev/video"+camVideoId+" --get-ctrl ";
-
-      exe(setCmd+"white_balance_temperature_auto=0");
-      exe(setCmd+"exposure_auto_priority=0");
-      exe(setCmd+"focus_auto=0");
-      exe(setCmd+"exposure_auto=0");
-      exe(setCmd+"gain=0");
-    }
-  }
-
   int modCam(String _action, String _param, int _val) {
 
     if(!withCamera)
@@ -351,24 +353,6 @@ public class cam {
     return -1;
     }  
 
-  void switchToManual() {
-    if (  System.getProperty ("os.name").contains("Linux") ) {
-
-      exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl focus_auto=0");
-      exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl gain=0");
-      
-			if(isBrio) {
-      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl white_balance_automatic=0");
-      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl auto_exposure=1");
-      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl exposure_dynamic_framerate=0");
-			} else {
-      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl white_balance_temperature_auto=0");
-      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl exposure_auto=1");
-      	exe("v4l2-ctl -d /dev/video"+camVideoId+" --set-ctrl exposure_auto_priority=0");
-			}
-     
-    }
-  }
 
   String exe(String cmd) {
     String returnedValues = "";

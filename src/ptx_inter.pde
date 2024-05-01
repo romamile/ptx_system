@@ -50,7 +50,9 @@ public class ptx_inter {
   // debug
   PFont fDef, fGlob;
   int debugType; // 0 - 1 - 2 - 3
-  
+  HashMap<String, PImage> tutoMap;
+  boolean showTutorial = false;
+
   toggle togUI;
   String strUI;
   int[] colUI = {255, 255, 255};
@@ -64,10 +66,7 @@ public class ptx_inter {
   // Scan
   int grayLevelUp, grayLevelDown;
   int whiteCtp;
-  int idCam; // should be in myCam
-  int marginFlash;
   boolean withFlash;
-  boolean savePicture;
 
   // Thread
   boolean withThread, postThreadAtScanNeeded;
@@ -92,13 +91,20 @@ public class ptx_inter {
 
   ptx_inter(PApplet _myParent) {
 
-    myGlobState = globState.MIRE;
+    myGlobState = globState.PLAY;
     myRecogState = recogState.RECOG_FLASH;
     myCamState =  cameraState.CAMERA_WHOLE;
 
     fDef = createFont("./data/MonospaceTypewriter.ttf", 28);
     fGlob = createFont("./data/MonospaceTypewriter.ttf", 28);
     debugType = 1;
+
+    tutoMap = new HashMap<String, PImage>();
+
+    for (String nameImage : new String[]{"F1", "F2", "F3_whole", "F3_roi", "F4_flash", "F4_roi", "F4_signal", "F4_histogram", "F4_area", "F4_contour"}) {
+        tutoMap.put( nameImage, loadImage("./ptx_system/assets/tuto/"+nameImage+".png") );
+    }
+
     togUI = new toggle();
     togUI.setSpanS(3);
     strUI = "";
@@ -120,12 +126,10 @@ public class ptx_inter {
 
     grayLevelUp   = 126;
     grayLevelDown = 126;
-    marginFlash = 5;
     withFlash = false;
     withThread = false;
     launchThread = false;
     postThreadAtScanNeeded = false;
-    savePicture = false;
 
     fIndex = -1;
     fName = "";
@@ -136,10 +140,19 @@ public class ptx_inter {
     ks = new Keystone(_myParent);
     surface = ks.createCornerPinSurface(wFrameFbo, hFrameFbo, 20);
     
-    idCam = loadJSONObject("data/config.json").getInt("idCam");
-    int wCam = loadJSONObject("data/config.json").getInt("wCam");
-    int hCam = loadJSONObject("data/config.json").getInt("hCam");
-    boolean withCam = loadJSONObject("data/config.json").getInt("withCamera") != 0;
+
+    // Creation of a config file in case one isn't present
+    File f = new File(dataPath("config.json"));
+    if (!f.exists())
+      saveConfig("data/config.json");
+
+
+    JSONObject camConfig = loadJSONObject("data/config.json").getJSONObject("camera"); 
+
+    int idCam = camConfig.getInt("id");
+    int wCam  = camConfig.getInt("wCam");
+    int hCam  = camConfig.getInt("hCam");
+    boolean withCam = camConfig.getInt("withCamera") != 0;
 
     if(withCam) {
       println("WITH CAMERA");
@@ -154,9 +167,7 @@ public class ptx_inter {
     myCam.startFromId(idCam, wCam, hCam, _myParent);
 
     // Load configuration file
-    File f = new File(dataPath("config.json"));
-    if (!f.exists()) saveConfig("data/config.json");
-    else             loadConfig("data/config.json");
+    loadConfig("data/config.json");
     
     calculateHomographyMatrice(wFrameFbo, hFrameFbo, myCam.ROI);
     
@@ -198,8 +209,6 @@ public class ptx_inter {
 
     myCam.updateImg();
 
-    if(savePicture)
-      myCam.mImgCroped.save("./drawings/auto/img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
   }
 
   /** 
@@ -220,9 +229,6 @@ public class ptx_inter {
    */
   void displayFBO() {
 
-    //if(withFlash && isScanning && myGlobState != globState.CAMERA)
-    //  translate(0,0,marginFlash);
-    
     surface.render(mFbo);
   }
   
@@ -265,7 +271,8 @@ public class ptx_inter {
 
     if ((debugType == 2 || debugType == 3) && !isScanning)
       displayDebugIntel();
-      
+
+    displayTutorial();
     showNotification();
      
     mFbo.endDraw();
@@ -365,10 +372,7 @@ public class ptx_inter {
     mFbo.stroke(255);
     
     if (debugType != 0) {
-      if(ks.isCalibrating())
-        mFbo.text("F2: MIRE 1/2 - CALIBRATING", 20, 40); 
-      else
-        mFbo.text("F2: MIRE 2/2 - DISPLAY", 20, 40); 
+      mFbo.text("F2: MIRE - CALIBRATING", 20, 40); 
     }
 
   }
@@ -416,10 +420,8 @@ public class ptx_inter {
           fill(255,130);
           textSize(18/myCam.zoomCamera);
           textAlign(CENTER);
-          if(myCam.ROI[0].x < myCam.ROI[2].x) // comparison with oposite point, to check if on the left side of the picture, for offset value
-            text( "TopLeft", myCam.ROI[0].x - 50, myCam.ROI[0].y);
-          else
-            text( "TopLeft", myCam.ROI[0].x + 50, myCam.ROI[0].y);
+          text( "TopLeft", myCam.ROI[0].x - 50, myCam.ROI[0].y - 50);
+          text( "TopRight", myCam.ROI[1].x + 50, myCam.ROI[1].y - 50);
         popStyle();
       }
 
@@ -461,7 +463,22 @@ public class ptx_inter {
 
 
       mFbo.fill(255);
-      
+
+
+      // Selected Corner
+
+      float radiusROI = 100;
+      mFbo.stroke(255, 200);
+      mFbo.noFill();
+      mFbo.strokeWeight(5);
+      switch(myCam.dotIndex) {
+      case 0: mFbo.ellipse(0, 0, radiusROI, radiusROI); break;
+      case 1: mFbo.ellipse(wFrameFbo, 0, radiusROI, radiusROI); break;
+      case 2: mFbo.ellipse(wFrameFbo, hFrameFbo - 20, radiusROI, radiusROI); break;
+      case 3: mFbo.ellipse(0, hFrameFbo, radiusROI, radiusROI); break;
+      }
+      mFbo.strokeWeight(1);
+
       if (debugType != 0)
         mFbo.text("F3: CAMERA 1/2 - ROI", 20, 40);
 
@@ -496,7 +513,8 @@ public class ptx_inter {
 
     case RECOG_ROI:
       mFbo.image(myCam.mImgCroped, 0, 0);
-      mFbo.fill(150, 150, 0);
+      mFbo.noStroke();
+      mFbo.fill(200, 0, 0);
 
       mFbo.rect(0,0, myPtx.margeScan, mFbo.height);
       mFbo.rect(0,0, mFbo.width, myPtx.margeScan);
@@ -667,7 +685,7 @@ public class ptx_inter {
     whiteCtp++;
 
 //    if (!withFlash && isInConfig && myGlobState == globState.CAMERA) {
-    if (isInConfig && myGlobState == globState.CAMERA) {
+    if (isInConfig && (myGlobState == globState.CAMERA || myGlobState == globState.MIRE) ) {
 
       mFbo.background(0.3f, 0.3f, 0.3f);
 
@@ -731,24 +749,42 @@ public class ptx_inter {
    */
   void displayDebugIntel() {
 
-    //Values
-    String debugExposure = "";
-    if(myCam.isBrio) {
-      debugExposure = " d  - Exposure  : " + myCam.modCam("get", "exposure_time_absolute", 0)  + "\n";
-    } else {
-      debugExposure = " d  - Exposure    : " + myCam.modCam("get", "exposure_absolute", 0) + "\n";
+    mFbo.textSize(20);
+    textSize(20);
+    mFbo.stroke(0);
+    stroke(0);
+    mFbo.strokeWeight(5);
+    strokeWeight(5);
 
+    //Values
+    int debugExposure = -999;
+    if(myCam.isBrio) {
+      debugExposure = myCam.modCam("get", "exposure_time_absolute", 0);
+    } else {
+      debugExposure = myCam.modCam("get", "exposure_absolute", 0);
     }
-    String debugStr = "--- \n"
-      + " a  - Luminance: " + myPtx.seuilValue + "\n"
-      + " z  - Saturation: " + int(100*myPtx.seuilSaturation)/100.0 + "\n"
-      + "e/r - GrayTop & Down: "  + grayLevelUp + " / " + grayLevelDown + "\n"
+
+    String debugStr = "\n"
+      + " --- Flash\n"
+      + "p - Gray Top: "   + grayLevelUp + " / 255\n"
+      + "o - Gray Down: "  + grayLevelDown + " / 255\n"
+      + "i - Margin: "     + myPtx.margeScan + "\n\n"
+
+      + "--- Filtering\n"
+      + " a - Luminance: " + myPtx.seuilLuminance + "\n"
+      + " z - Saturation: " + int(100*myPtx.seuilSaturation)/100.0 + "\n"
+      + " e - dot VS big: " + myPtx.seuil_dotVSbig + "\n"
+      + " r - line VS fill: " + myPtx.seuil_lineVSfill + "\n"
+      + " t - tooSmall Contour: " + myPtx.tooSmallContour + "\n"
+      + " y - tooSmall Surface: " + myPtx.tooSmallSurface + "\n\n"
+
       + "--- Camera\n"
-      + debugExposure
-      + " f  - Saturation  : " + myCam.modCam("get", "saturation", 0)  + "\n"
-      + " g  - Brightness  : " + myCam.modCam("get", "brightness", 0) + "\n"
-      + " h  - Contrast    : " + myCam.modCam("get", "contrast", 0) + "\n"
-      + " j  - Temperature : " + myCam.modCam("get", "white_balance_temperature", 0) + "\n";
+      + " d - Exposure  : "   + debugExposure + "\n"
+      + " f - Saturation  : " + myCam.modCam("get", "saturation", 0)  + "\n"
+      + " g - Brightness  : " + myCam.modCam("get", "brightness", 0) + "\n"
+      + " h - Contrast    : " + myCam.modCam("get", "contrast", 0) + "\n"
+      + " j - Temperature : " + myCam.modCam("get", "white_balance_temperature", 0) + "\n"
+      + " c - zoom : "        + myCam.zoomCamera + "\n";
 
 
     if (debugType == 2) {
@@ -773,6 +809,66 @@ public class ptx_inter {
 
     mFbo.textAlign(LEFT);
     textAlign(LEFT);
+
+    mFbo.noStroke();
+    noStroke();
+
+    mFbo.textSize(28);
+    textSize(28);
+
+    mFbo.strokeWeight(1);
+    strokeWeight(1);
+  }
+
+  void displayTutorial() {
+    if(!showTutorial || isScanning)
+      return;
+
+    PImage imgTuto = tutoMap.get("F1");
+
+    switch (myGlobState) {
+      case PLAY:
+        imgTuto = tutoMap.get("F1");
+        break;
+      case MIRE:
+        imgTuto = tutoMap.get("F2");
+        break;
+      case CAMERA:
+        switch (myCamState) {
+        case CAMERA_WHOLE:  
+          imgTuto = tutoMap.get("F3_whole");
+          image(imgTuto, width / 2 - 550*0.9, height / 2 - 340.f, imgTuto.width, imgTuto.height);
+          break;
+        case CAMERA_ROI:
+          imgTuto = tutoMap.get("F3_roi");
+          break;
+        }
+        break;
+      case RECOG:
+        switch (myRecogState) {
+        case RECOG_FLASH:
+          imgTuto = tutoMap.get("F4_flash");
+          break;
+        case RECOG_ROI:
+          imgTuto = tutoMap.get("F4_roi");
+          break;
+        case RECOG_BACK:
+          imgTuto = tutoMap.get("F4_signal");
+          break;
+        case RECOG_COL:
+          imgTuto = tutoMap.get("F4_histogram");
+          break;
+        case RECOG_AREA:
+          imgTuto = tutoMap.get("F4_area");
+          break;
+        case RECOG_CONTOUR:
+          imgTuto = tutoMap.get("F4_contour");
+          break;
+      }
+    }
+
+    mFbo.image(imgTuto, wFrameFbo / 2 - 550*0.9, hFrameFbo / 2 - 340.f, imgTuto.width, imgTuto.height);
+
   }
 
   /** 
@@ -833,63 +929,97 @@ public class ptx_inter {
   void saveConfig(String _filePath) {
     println("Config Saved!");
     
-    //Save key stone
+    // Save keystone config
     ks.save("./data/configKeyStone.xml");
+
+    // Save PTX config
     
-    JSONObject json = new JSONObject();
+    JSONObject config = new JSONObject();
 
-    json.setFloat("seuilSaturation", myPtx.seuilSaturation);
-    json.setFloat("seuilValue", myPtx.seuilValue);
-    json.setInt("grayLevelUp", grayLevelUp);
-    json.setInt("grayLevelDown", grayLevelDown);
-    json.setInt("marginFlash", marginFlash);
-    json.setInt("withFlash", withFlash ? 1 : 0);
-    json.setInt("withThread", withThread ? 1 : 0);
-    json.setInt("savePicture", savePicture ? 1 : 0);
+      // 1] Camera
+    JSONObject camConfig = new JSONObject();
 
-    json.setInt("redMin", myPtx.listZone.get(0).getMin());
-    json.setInt("redMax", myPtx.listZone.get(0).getMax());
-    json.setInt("greenMin", myPtx.listZone.get(1).getMin());
-    json.setInt("greenMax", myPtx.listZone.get(1).getMax());
-    json.setInt("blueMin", myPtx.listZone.get(2).getMin());
-    json.setInt("blueMax", myPtx.listZone.get(2).getMax());
-    json.setInt("yellowMin", myPtx.listZone.get(3).getMin());
-    json.setInt("yellowMax", myPtx.listZone.get(3).getMax());
-
-    json.setFloat("UpperLeftX", myCam.ROI[0].x);
-    json.setFloat("UpperLeftY", myCam.ROI[0].y);
-    json.setFloat("UpperRightX", myCam.ROI[1].x);
-    json.setFloat("UpperRightY", myCam.ROI[1].y);
-    json.setFloat("LowerRightX", myCam.ROI[2].x);
-    json.setFloat("LowerRightY", myCam.ROI[2].y);
-    json.setFloat("LowerLeftX", myCam.ROI[3].x);
-    json.setFloat("LowerLeftY", myCam.ROI[3].y);
-
-    json.setInt("margeScan", myPtx.margeScan);
-    json.setInt("tooSmallThreshold", myPtx.tooSmallThreshold);
-    json.setInt("tooSmallContourThreshold", myPtx.tooSmallContourThreshold);
-
-    //TEMP, quand supprimer, ne pas oublier de retirer la virgule juste au dessus
-    json.setFloat("seuil_ratioSurfacePerimetre", myPtx.seuil_ratioSurfacePerimetre);
-    json.setFloat("seuil_tailleSurface", myPtx.seuil_tailleSurface);
-
-    json.setInt("idCam", idCam);
-    json.setInt("wCam", myCam.wCam);
-    json.setInt("hCam", myCam.hCam);
-    json.setInt("withCamera", myCam.withCamera ? 1 : 0);
+    camConfig.setInt("id", myCam.id);
+    camConfig.setInt("wCam", myCam.wCam);
+    camConfig.setInt("hCam", myCam.hCam);
+    camConfig.setInt("withCamera", myCam.withCamera ? 1 : 0);
 
     if(myCam.isBrio) {
-      json.setInt("cam_exposure", myCam.modCam("get", "exposure_time_absolute", 0) );
+      camConfig.setInt("exposure", myCam.modCam("get", "exposure_time_absolute", 0) );
     } else {
-      json.setInt("cam_exposure", myCam.modCam("get", "exposure_absolute", 0) );
+      camConfig.setInt("exposure", myCam.modCam("get", "exposure_absolute", 0) );
     }
-    json.setInt("cam_saturation", myCam.modCam("get", "saturation", 0) );
-    json.setInt("cam_brightness", myCam.modCam("get", "brightness", 0) );
-    json.setInt("cam_contrast", myCam.modCam("get", "contrast", 0) );
-    json.setInt("cam_temperature", myCam.modCam("get", "white_balance_temperature", 0) );
+    camConfig.setInt("saturation", myCam.modCam("get", "saturation", 0) );
+    camConfig.setInt("brightness", myCam.modCam("get", "brightness", 0) );
+    camConfig.setInt("contrast", myCam.modCam("get", "contrast", 0) );
+    camConfig.setInt("temperature", myCam.modCam("get", "white_balance_temperature", 0) );
+    camConfig.setFloat("zoom", myCam.zoomCamera );
 
+    config.setJSONObject("camera", camConfig);
+
+
+      // 2] Seuil
+    JSONObject seuilConfig = new JSONObject();
+
+    seuilConfig.setFloat("seuilSaturation", myPtx.seuilSaturation);
+    seuilConfig.setFloat("seuilLuminance", myPtx.seuilLuminance);
+    seuilConfig.setInt("tooSmallSurface", myPtx.tooSmallSurface);
+    seuilConfig.setInt("tooSmallContour", myPtx.tooSmallContour);
+    seuilConfig.setFloat("seuil_lineVSfill", myPtx.seuil_lineVSfill);
+    seuilConfig.setFloat("seuil_dotVSbig", myPtx.seuil_dotVSbig);
+
+    config.setJSONObject("seuil", seuilConfig);
+
+
+      // 3] Histogram
+    JSONObject histoConfig = new JSONObject();
+
+    histoConfig.setInt("redMin", myPtx.listZone.get(0).getMin());
+    histoConfig.setInt("redMax", myPtx.listZone.get(0).getMax());
+    histoConfig.setInt("greenMin", myPtx.listZone.get(1).getMin());
+    histoConfig.setInt("greenMax", myPtx.listZone.get(1).getMax());
+    histoConfig.setInt("blueMin", myPtx.listZone.get(2).getMin());
+    histoConfig.setInt("blueMax", myPtx.listZone.get(2).getMax());
+    histoConfig.setInt("yellowMin", myPtx.listZone.get(3).getMin());
+    histoConfig.setInt("yellowMax", myPtx.listZone.get(3).getMax());
+
+    config.setJSONObject("histogram", histoConfig);
+
+
+      // 4] Trapeze
+    JSONObject trapezeConfig = new JSONObject();
+
+    trapezeConfig.setFloat("UpperLeftX", myCam.ROI[0].x);
+    trapezeConfig.setFloat("UpperLeftY", myCam.ROI[0].y);
+    trapezeConfig.setFloat("UpperRightX", myCam.ROI[1].x);
+    trapezeConfig.setFloat("UpperRightY", myCam.ROI[1].y);
+    trapezeConfig.setFloat("LowerRightX", myCam.ROI[2].x);
+    trapezeConfig.setFloat("LowerRightY", myCam.ROI[2].y);
+    trapezeConfig.setFloat("LowerLeftX", myCam.ROI[3].x);
+    trapezeConfig.setFloat("LowerLeftY", myCam.ROI[3].y);
+
+    config.setJSONObject("trapeze", trapezeConfig);
     
-    saveJSONObject(json, _filePath);
+
+      // 5] Flash
+    JSONObject flashConfig = new JSONObject();
+
+    flashConfig.setInt("grayLevelUp", grayLevelUp);
+    flashConfig.setInt("grayLevelDown", grayLevelDown);
+    flashConfig.setInt("withFlash", withFlash ? 1 : 0);
+    flashConfig.setInt("margeScan", myPtx.margeScan);
+
+    config.setJSONObject("flash", flashConfig);
+
+
+      // 6] Misc
+    JSONObject miscConfig = new JSONObject();
+    miscConfig.setInt("withThread", withThread ? 1 : 0);
+
+    config.setJSONObject("misc", miscConfig);
+
+
+    saveJSONObject(config, _filePath);
   }
 
 
@@ -898,82 +1028,91 @@ public class ptx_inter {
    */
   void loadConfig(String _filePath) {
 
-    //load keystone
+    // Load keystone config
     ks.load("./data/configKeyStone.xml");
+
+    // Load PTX config
     
-    JSONObject json = loadJSONObject(_filePath);
-
-    myPtx.seuilSaturation = json.getFloat("seuilSaturation");
-    myPtx.seuilValue      = json.getFloat("seuilValue");
-    grayLevelUp   = json.getInt("grayLevelUp");
-    grayLevelDown = json.getInt("grayLevelDown");
-    marginFlash = json.getInt("marginFlash");
-    withFlash = json.getInt("withFlash") == 1;
-    withThread = json.getInt("withThread") == 1;
-    savePicture = json.getInt("savePicture") == 1;
-
-    int redMin, redMax, greenMin, greenMax, blueMin, blueMax, yellowMin, yellowMax, backMin, backMax;
-    redMin    = json.getInt("redMin");
-    redMax    = json.getInt("redMax");
-    greenMin  = json.getInt("greenMin");
-    greenMax  = json.getInt("greenMax");
-    blueMin   = json.getInt("blueMin");
-    blueMax   = json.getInt("blueMax");
-    yellowMin = json.getInt("yellowMin");
-    yellowMax = json.getInt("yellowMax");
-
-    //    backMin = json.getInt("backMin");
-    //    backMax = json.getInt("backMax");
-
-    myPtx.listZone.clear();
-    myPtx.listZone.add( new hueInterval(redMin, redMax) );
-    myPtx.listZone.add( new hueInterval(greenMin, greenMax) );
-    myPtx.listZone.add( new hueInterval(blueMin, blueMax) );
-    myPtx.listZone.add( new hueInterval(yellowMin, yellowMax) );
-
-    myPtx.margeScan = json.getInt("margeScan");
-
-    //    myPtx.backHue = new hueInterval(backMin, backMax);
-    //    if(backMin != backMax)
-    //      myPtx.hasBackHue = true;
-
-    myCam.ROI[0].x = json.getFloat("UpperLeftX");
-    myCam.ROI[0].y = json.getFloat("UpperLeftY");
-    myCam.ROI[1].x = json.getFloat("UpperRightX");
-    myCam.ROI[1].y = json.getFloat("UpperRightY");
-    myCam.ROI[2].x = json.getFloat("LowerRightX");
-    myCam.ROI[2].y = json.getFloat("LowerRightY");
-    myCam.ROI[3].x = json.getFloat("LowerLeftX");
-    myCam.ROI[3].y = json.getFloat("LowerLeftY");
-
-    myPtx.tooSmallThreshold = json.getInt("tooSmallThreshold");
-    myPtx.tooSmallContourThreshold = json.getInt("tooSmallContourThreshold");
+    JSONObject config = loadJSONObject(_filePath);
 
 
-    //TEMP, quand supprimer, ne pas oublier de retirer la virgule juste au dessus
-    myPtx.seuil_ratioSurfacePerimetre = json.getFloat("seuil_ratioSurfacePerimetre");
-    myPtx.seuil_tailleSurface = json.getFloat("seuil_tailleSurface");
+      // 1] Camera
+    JSONObject camConfig = config.getJSONObject("camera"); 
 
-
-    idCam = loadJSONObject(_filePath).getInt("idCam");
-    
     if(myCam.isBrio) {
-      myCam.modCam("set", "exposure_time_absolute", floor(json.getFloat("cam_exposure")) );
+      myCam.modCam("set", "exposure_time_absolute", floor(camConfig.getFloat("exposure")) );
     } else {
-      myCam.modCam("set", "exposure_absolute", floor(json.getFloat("cam_exposure")) );
+      myCam.modCam("set", "exposure_absolute", floor(camConfig.getFloat("exposure")) );
     }
 
-    myCam.modCam("set", "saturation", floor(json.getFloat("cam_saturation")) );
-    myCam.modCam("set", "brightness", floor(json.getFloat("cam_brightness")) );
-    myCam.modCam("set", "contrast", floor(json.getFloat("cam_contrast")) );
-    myCam.modCam("set", "white_balance_temperature", floor(json.getFloat("cam_temperature")) );  
+    myCam.modCam("set", "saturation", floor(camConfig.getFloat("saturation")) );
+    myCam.modCam("set", "brightness", floor(camConfig.getFloat("brightness")) );
+    myCam.modCam("set", "contrast",   floor(camConfig.getFloat("contrast")) );
+    myCam.modCam("set", "white_balance_temperature", floor(camConfig.getFloat("temperature")) );  
+    myCam.zoomCamera = camConfig.getFloat("zoom");
+
     
+      // 2] Seuil
+    JSONObject seuilConfig = config.getJSONObject("seuil"); 
+
+    myPtx.seuilSaturation  = seuilConfig.getFloat("seuilSaturation");
+    myPtx.seuilLuminance   = seuilConfig.getFloat("seuilLuminance");
+    myPtx.tooSmallSurface  = seuilConfig.getInt("tooSmallSurface");
+    myPtx.tooSmallContour  = seuilConfig.getInt("tooSmallContour");
+    myPtx.seuil_lineVSfill = seuilConfig.getFloat("seuil_lineVSfill");
+    myPtx.seuil_dotVSbig   = seuilConfig.getFloat("seuil_dotVSbig");
+
+
+      // 3] Histogram
+    JSONObject histoConfig = config.getJSONObject("histogram"); 
+
+    myPtx.listZone.clear();
+    myPtx.listZone.add( new hueInterval( histoConfig.getInt("redMin"), histoConfig.getInt("redMax") ) );
+    myPtx.listZone.add( new hueInterval( histoConfig.getInt("greenMin"), histoConfig.getInt("greenMax") ) );
+    myPtx.listZone.add( new hueInterval( histoConfig.getInt("blueMin"), histoConfig.getInt("blueMax") ) );
+    myPtx.listZone.add( new hueInterval( histoConfig.getInt("yellowMin"), histoConfig.getInt("yellowMax") ) );
+
+      
+      // 4] trapeze
+    JSONObject trapezeConfig = config.getJSONObject("trapeze"); 
+
+    myCam.ROI[0].x = trapezeConfig.getFloat("UpperLeftX");
+    myCam.ROI[0].y = trapezeConfig.getFloat("UpperLeftY");
+    myCam.ROI[1].x = trapezeConfig.getFloat("UpperRightX");
+    myCam.ROI[1].y = trapezeConfig.getFloat("UpperRightY");
+    myCam.ROI[2].x = trapezeConfig.getFloat("LowerRightX");
+    myCam.ROI[2].y = trapezeConfig.getFloat("LowerRightY");
+    myCam.ROI[3].x = trapezeConfig.getFloat("LowerLeftX");
+    myCam.ROI[3].y = trapezeConfig.getFloat("LowerLeftY");
+
+      
+      // 5] Flash
+    JSONObject flashConfig = config.getJSONObject("flash"); 
+
+    withFlash     = flashConfig.getInt("withFlash") == 1;
+    grayLevelUp   = flashConfig.getInt("grayLevelUp");
+    grayLevelDown = flashConfig.getInt("grayLevelDown");
+    myPtx.margeScan = flashConfig.getInt("margeScan");
+
+
+      // 6] Misc
+    JSONObject miscConfig = config.getJSONObject("misc"); 
+
+    withThread      = miscConfig.getInt("withThread") == 1;
+
   }
 
   void managementKeyReleased() {
    if(keyCode == SHIFT) {
      shiftPressed = false;
    }
+
+    switch(keyCode) {
+    case (KeyEvent.VK_F9-15):
+      showTutorial = false;
+      break;  
+    }
+
   }
     
     
@@ -993,7 +1132,7 @@ public class ptx_inter {
       myGlobState = globState.PLAY;
       break;
     case (KeyEvent.VK_F2-15):
-      ks.toggleCalibration();
+      ks.startCalibration();
       isInConfig = true;
       myPtx.verboseImg = true;
       myCam.dotIndex = -1;
@@ -1019,6 +1158,10 @@ public class ptx_inter {
           break;
         }
       }
+      
+      if (myCam.dotIndex == -1)
+        myCam.dotIndex = 0;
+
       myGlobState = globState.CAMERA;
       break;
     case (KeyEvent.VK_F4-15):
@@ -1057,6 +1200,7 @@ public class ptx_inter {
       }
       break;
 
+/*
     case (KeyEvent.VK_F8-15):
       myCam.update();
       scanCam();
@@ -1065,9 +1209,14 @@ public class ptx_inter {
     case (KeyEvent.VK_F9-15):
       scanClr(); 
       break;  
-      
+ */    
+    case (KeyEvent.VK_F9-15):
+      showTutorial = true;
+      break;  
+
      case (KeyEvent.VK_F10-15): case (KeyEvent.VK_F10):
       if (!isScanning) {
+        ks.stopCalibration();
         whiteCtp = 0;
         isScanning = true;
       }
@@ -1089,9 +1238,10 @@ public class ptx_inter {
     case 'x': loadConfig("data/config.json"); notify("Config Loaded!", 255, 255, 255); break;
     case 'X': loadConfig("data/config_ref_1.json"); notify("Config Loaded!", 255, 255, 255); break;
 
+    // Seuil
     case 'A': case 'a':
-      if(key == 'a') myPtx.seuilValue  = Math.max(  0.f, myPtx.seuilValue + 1);
-      else           myPtx.seuilValue  = Math.max(  0.f, myPtx.seuilValue - 1);
+      if(key == 'a') myPtx.seuilLuminance  = Math.max(  0.f, myPtx.seuilLuminance + 1);
+      else           myPtx.seuilLuminance  = Math.max(  0.f, myPtx.seuilLuminance - 1);
       myCam.updateImg();
       myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 2);
       break;
@@ -1103,10 +1253,45 @@ public class ptx_inter {
       myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 2);
       break;
     
-    case 'E': grayLevelUp  = Math.max(  0, grayLevelUp -3);    break;
-    case 'e': grayLevelUp  = Math.min(255, grayLevelUp +3);    break;
-    case 'R': grayLevelDown = Math.max(  0, grayLevelDown -3); break;
-    case 'r': grayLevelDown = Math.min(255, grayLevelDown +3); break;
+    case 'E': case 'e':
+      if(key == 'e') myPtx.seuil_dotVSbig  = Math.max( 0, myPtx.seuil_dotVSbig + 1);
+      else           myPtx.seuil_dotVSbig  = Math.max( 0, myPtx.seuil_dotVSbig - 1);
+      myCam.updateImg();
+      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 2);
+      break;
+
+    case 'R': case 'r':
+      if(key == 'r') myPtx.seuil_lineVSfill  = Math.max( 0, myPtx.seuil_lineVSfill + 0.1);
+      else           myPtx.seuil_lineVSfill  = Math.max( 0, myPtx.seuil_lineVSfill - 0.1);
+      myCam.updateImg();
+      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 2);
+      break;
+
+    case 'T': case 't':
+      if(key == 't') myPtx.tooSmallContour  = Math.max( 0, myPtx.tooSmallContour + 1);
+      else           myPtx.tooSmallContour  = Math.max( 0, myPtx.tooSmallContour - 1);
+      myCam.updateImg();
+      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 2);
+      break;
+
+    case 'Y': case 'y':
+      if(key == 'y') myPtx.tooSmallSurface  = Math.max( 0, myPtx.tooSmallSurface + 1);
+      else           myPtx.tooSmallSurface  = Math.max( 0, myPtx.tooSmallSurface - 1);
+      myCam.updateImg();
+      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 2);
+      break;
+
+
+    // Flash
+    case 'P': grayLevelUp     = Math.max(  0, grayLevelUp     - 3); break;
+    case 'p': grayLevelUp     = Math.min(255, grayLevelUp     + 3); break;
+    case 'O': grayLevelDown   = Math.max(  0, grayLevelDown   - 3); break;
+    case 'o': grayLevelDown   = Math.min(255, grayLevelDown   + 3); break;
+    case 'I': myPtx.margeScan = Math.max(  0, myPtx.margeScan - 1); break;
+    case 'i': myPtx.margeScan = Math.min(200, myPtx.margeScan + 1); break;
+
+
+    // Camera
     case 'd': 
       if(myCam.isBrio) {
         myCam.modCam("add", "exposure_time_absolute",  10);
@@ -1132,6 +1317,8 @@ public class ptx_inter {
     case 'j': myCam.modCam("add", "white_balance_temperature", 50);  myCam.update(); break;
     case 'J': myCam.modCam("add", "white_balance_temperature", -50); myCam.update(); break;
 
+
+    // Histogram
     case 'S': case 's':
       if (myPtx.indexHue%2 != 0)
         myPtx.listZone.get(myPtx.indexHue/2).b =
@@ -1148,23 +1335,26 @@ public class ptx_inter {
       myPtx.indexHue = (myPtx.indexHue + (key == 'q' ? 1 : 7))%8;
       break;
 
-      // Gestion Cam
+
+      // Trapeze
     case 'C': myCam.zoomCamera*=1.02;       break;
     case 'c': myCam.zoomCamera/=1.02;       break;
 
-    case 'o': case 'l': case 'k': case 'm':
-      if( myCam.dotIndex != -1 ) {
-        switch(key) {
-        case 'o' : myCam.ROI[myCam.dotIndex].y -= 1; break;
-        case 'l' : myCam.ROI[myCam.dotIndex].y += 1; break;
-        case 'k' : myCam.ROI[myCam.dotIndex].x -= 1; break;
-        case 'm' : myCam.ROI[myCam.dotIndex].x += 1; break;
-        }
-        calculateHomographyMatrice(wFrameFbo, hFrameFbo, myCam.ROI);
-        scanCam();
-      }
-      break;
+    case ' ': myCam.dotIndex = (myCam.dotIndex + 1)%4; break;
+
     }
+
+    if (key == CODED && myCam.dotIndex != -1 ) { // conditions should be separated...
+      switch(keyCode) {
+      case UP    : myCam.ROI[myCam.dotIndex].y -= 1; break;
+      case DOWN  : myCam.ROI[myCam.dotIndex].y += 1; break;
+      case LEFT  : myCam.ROI[myCam.dotIndex].x -= 1; break;
+      case RIGHT : myCam.ROI[myCam.dotIndex].x += 1; break;
+      }
+      calculateHomographyMatrice(wFrameFbo, hFrameFbo, myCam.ROI);
+      scanCam();
+    }
+
   }
   
   // GAME STATION

@@ -47,7 +47,7 @@ public class ptx {
   hueInterval backHue;
   boolean hasBackHue;
 
-  float seuilSaturation, seuilValue;
+  float seuilSaturation, seuilLuminance;
 
   // Hues
   int[] histHue;
@@ -64,21 +64,21 @@ public class ptx {
   int margeScan;
   
   ArrayList<Integer> idLabels;
-  public int tooSmallThreshold;
-  public int tooSmallContourThreshold;
+  public int tooSmallSurface;
+  public int tooSmallContour;
 
   public boolean verboseImg;
   
   public vec2i specROItl, specROIbr;
 
   // TEMP
-  public float seuil_ratioSurfacePerimetre;
-  public float seuil_tailleSurface;
+  public float seuil_lineVSfill;
+  public float seuil_dotVSbig;
 
   public ptx() {
 
-    tooSmallThreshold = 40;
-    tooSmallContourThreshold = 33;
+    tooSmallSurface = 40;
+    tooSmallContour = 33;
     
     backHue = new hueInterval();
     hasBackHue = false;
@@ -112,15 +112,15 @@ public class ptx {
     }
 
     seuilSaturation = 0.32;
-    seuilValue = 255;
+    seuilLuminance = 255;
     
     specROItl = new vec2i(0,0);
     specROIbr = new vec2i(9999, 9999);
 
 
     // TEMP
-    seuil_ratioSurfacePerimetre = 1.3;
-    seuil_tailleSurface = 400;
+    seuil_lineVSfill = 1.3;
+    seuil_dotVSbig = 400;
   }
  //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>// //<>//
   
@@ -281,7 +281,7 @@ public class ptx {
 
       if (
         // == Enough Color and not too White
-           cT.r + cT.g + cT.b < seuilValue*3
+           cT.r + cT.g + cT.b < seuilLuminance*3
         && cT.getS() >= seuilSaturation 
         
         // == Not on the surface of the pince
@@ -542,7 +542,7 @@ public class ptx {
     while (myArea.hasNext()) {
       area it = myArea.next(); // must be called before you can call i.remove()
 
-      if (it.posXY.size() <= tooSmallThreshold) {
+      if (it.posXY.size() <= tooSmallSurface) {
         for (vec2i itPos : it.posXY) {
           ids[itPos.y * ww + itPos.x] = -1; // reset ids
           idsArea[itPos.y * ww + itPos.x] = -1; // reset ids
@@ -653,7 +653,7 @@ public class ptx {
 
       while (itContour.hasNext()) {
         ArrayList<vec2i> presContour = itContour.next(); // must be called before you can call i.remove()
-        if (presContour.size() < tooSmallContourThreshold) { //not enough to create a real 2D shape
+        if (presContour.size() < tooSmallContour) { //not enough to create a real 2D shape
           itContour.remove();
         }
       }
@@ -685,12 +685,12 @@ public class ptx {
         it.myShape = area_shape.GAP;
       } else {
 
-        if (it.posXY.size() < seuil_tailleSurface) {
+        if (it.posXY.size() < seuil_dotVSbig) {
           it.myShape = area_shape.DOT;
         } else {
 
           //      if (it->disContour.size() > 1.3 * std::sqrt(4 * 3 * it->posXY.size())) {
-          if (it.listContour.get(0).size() > seuil_ratioSurfacePerimetre * Math.sqrt(4 * 3 * it.posXY.size())) {
+          if (it.listContour.get(0).size() > seuil_lineVSfill * Math.sqrt(4 * 3 * it.posXY.size())) {
             it.myShape = area_shape.LINE;
           } else {
             it.myShape = area_shape.FILL;
