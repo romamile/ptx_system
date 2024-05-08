@@ -95,6 +95,7 @@ public class ptx_inter {
   ptx_inter(PApplet _myParent) {
 
     myGlobState = globState.PLAY;
+
     myRecogState = recogState.RECOG_FLASH;
     myCamState =  cameraState.CAMERA_WHOLE;
 
@@ -104,7 +105,7 @@ public class ptx_inter {
 
     tutoMap = new HashMap<String, PImage>();
 
-    for (String nameImage : new String[]{"F1", "F2", "F3_whole", "F3_roi", "F4_flash", "F4_roi", "F4_signal", "F4_histogram", "F4_area", "F4_contour"}) {
+    for (String nameImage : new String[]{"F1", "F2", "F3_1_whole", "F3_2_roi", "F4_1_flash", "F4_2_roi", "F4_3_signal", "F4_4_histogram", "F4_5_area", "F4_6_contour"}) {
         tutoMap.put( nameImage, loadImage("./ptx_system/assets/tuto/"+nameImage+".png") );
     }
 
@@ -153,9 +154,9 @@ public class ptx_inter {
     JSONObject camConfig = loadJSONObject("data/config.json").getJSONObject("camera"); 
 
     int idCam = camConfig.getInt("id");
-    int wCam  = camConfig.getInt("wCam");
-    int hCam  = camConfig.getInt("hCam");
-    boolean withCam = camConfig.getInt("withCamera") != 0;
+    int wCam  = camConfig.getInt("width");
+    int hCam  = camConfig.getInt("height");
+    boolean withCam = camConfig.getInt("enabled") != 0;
 
     if(withCam) {
       println("WITH CAMERA");
@@ -430,7 +431,7 @@ public class ptx_inter {
 
 
       fill(255);
-      popMatrix();
+      pop();
       
       break;
 
@@ -483,7 +484,7 @@ public class ptx_inter {
       mFbo.strokeWeight(1);
 
       if (debugType != 0)
-        mFbo.text("F3: CAMERA 1/2 - ROI", 20, 40);
+        mFbo.text("F3: CAMERA 2/2 - ROI", 20, 40);
 
       break;
     }
@@ -839,33 +840,33 @@ public class ptx_inter {
       case CAMERA:
         switch (myCamState) {
         case CAMERA_WHOLE:  
-          imgTuto = tutoMap.get("F3_whole");
+          imgTuto = tutoMap.get("F3_1_whole");
           image(imgTuto, width / 2 - 550*0.9, height / 2 - 340.f, imgTuto.width, imgTuto.height);
           break;
         case CAMERA_ROI:
-          imgTuto = tutoMap.get("F3_roi");
+          imgTuto = tutoMap.get("F3_2_roi");
           break;
         }
         break;
       case RECOG:
         switch (myRecogState) {
         case RECOG_FLASH:
-          imgTuto = tutoMap.get("F4_flash");
+          imgTuto = tutoMap.get("F4_1_flash");
           break;
         case RECOG_ROI:
-          imgTuto = tutoMap.get("F4_roi");
+          imgTuto = tutoMap.get("F4_2_roi");
           break;
         case RECOG_BACK:
-          imgTuto = tutoMap.get("F4_signal");
+          imgTuto = tutoMap.get("F4_3_signal");
           break;
         case RECOG_COL:
-          imgTuto = tutoMap.get("F4_histogram");
+          imgTuto = tutoMap.get("F4_4_histogram");
           break;
         case RECOG_AREA:
-          imgTuto = tutoMap.get("F4_area");
+          imgTuto = tutoMap.get("F4_5_area");
           break;
         case RECOG_CONTOUR:
-          imgTuto = tutoMap.get("F4_contour");
+          imgTuto = tutoMap.get("F4_6_contour");
           break;
       }
     }
@@ -949,9 +950,9 @@ public class ptx_inter {
     JSONObject camConfig = new JSONObject();
 
     camConfig.setInt("id", myCam.id);
-    camConfig.setInt("wCam", myCam.wCam);
-    camConfig.setInt("hCam", myCam.hCam);
-    camConfig.setInt("withCamera", myCam.withCamera ? 1 : 0);
+    camConfig.setInt("width", myCam.wCam);
+    camConfig.setInt("height", myCam.hCam);
+    camConfig.setInt("enabled", myCam.withCamera ? 1 : 0);
 
     if(myCam.isBrio) {
       camConfig.setInt("exposure", myCam.modCam("get", "exposure_time_absolute", 0) );
@@ -970,12 +971,12 @@ public class ptx_inter {
       // 2] Seuil
     JSONObject seuilConfig = new JSONObject();
 
-    seuilConfig.setFloat("seuilSaturation", myPtx.seuilSaturation);
-    seuilConfig.setFloat("seuilLuminance", myPtx.seuilLuminance);
+    seuilConfig.setFloat("saturation", myPtx.seuilSaturation);
+    seuilConfig.setFloat("luminance", myPtx.seuilLuminance);
     seuilConfig.setInt("tooSmallSurface", myPtx.tooSmallSurface);
     seuilConfig.setInt("tooSmallContour", myPtx.tooSmallContour);
-    seuilConfig.setFloat("seuil_lineVSfill", myPtx.seuil_lineVSfill);
-    seuilConfig.setFloat("seuil_dotVSbig", myPtx.seuil_dotVSbig);
+    seuilConfig.setFloat("lineVSfill", myPtx.seuil_lineVSfill);
+    seuilConfig.setFloat("dotVSbig", myPtx.seuil_dotVSbig);
 
     config.setJSONObject("seuil", seuilConfig);
 
@@ -1015,7 +1016,7 @@ public class ptx_inter {
 
     flashConfig.setInt("grayLevelUp", grayLevelUp);
     flashConfig.setInt("grayLevelDown", grayLevelDown);
-    flashConfig.setInt("withFlash", withFlash ? 1 : 0);
+    flashConfig.setInt("enabled", withFlash ? 1 : 0);
     flashConfig.setInt("margeScan", myPtx.margeScan);
 
     config.setJSONObject("flash", flashConfig);
@@ -1064,12 +1065,12 @@ public class ptx_inter {
       // 2] Seuil
     JSONObject seuilConfig = config.getJSONObject("seuil"); 
 
-    myPtx.seuilSaturation  = seuilConfig.getFloat("seuilSaturation");
-    myPtx.seuilLuminance   = seuilConfig.getFloat("seuilLuminance");
+    myPtx.seuilSaturation  = seuilConfig.getFloat("saturation");
+    myPtx.seuilLuminance   = seuilConfig.getFloat("luminance");
     myPtx.tooSmallSurface  = seuilConfig.getInt("tooSmallSurface");
     myPtx.tooSmallContour  = seuilConfig.getInt("tooSmallContour");
-    myPtx.seuil_lineVSfill = seuilConfig.getFloat("seuil_lineVSfill");
-    myPtx.seuil_dotVSbig   = seuilConfig.getFloat("seuil_dotVSbig");
+    myPtx.seuil_lineVSfill = seuilConfig.getFloat("lineVSfill");
+    myPtx.seuil_dotVSbig   = seuilConfig.getFloat("dotVSbig");
 
 
       // 3] Histogram
@@ -1098,7 +1099,7 @@ public class ptx_inter {
       // 5] Flash
     JSONObject flashConfig = config.getJSONObject("flash"); 
 
-    withFlash     = flashConfig.getInt("withFlash") == 1;
+    withFlash     = flashConfig.getInt("enabled") == 1;
     grayLevelUp   = flashConfig.getInt("grayLevelUp");
     grayLevelDown = flashConfig.getInt("grayLevelDown");
     myPtx.margeScan = flashConfig.getInt("margeScan");
@@ -1126,10 +1127,10 @@ public class ptx_inter {
     
     
   void managementKeyPressed() {      // MANAGEMENT KEYS (FK_F** - 5), the -5 is here because of a weird behavior of P3D for keymanagement
-  
-   if(keyCode == SHIFT) {
-     shiftPressed = true;
-   }
+
+    if(keyCode == SHIFT) {
+      shiftPressed = true;
+    }
   
     switch(keyCode) {
     case (KeyEvent.VK_F1-15):
@@ -1209,16 +1210,6 @@ public class ptx_inter {
       }
       break;
 
-/*
-    case (KeyEvent.VK_F8-15):
-      myCam.update();
-      scanCam();
-     break;
-      
-    case (KeyEvent.VK_F9-15):
-      scanClr(); 
-      break;  
- */    
     case (KeyEvent.VK_F9-15):
       showTutorial = true;
       break;  
@@ -1266,28 +1257,28 @@ public class ptx_inter {
       if(key == 'e') myPtx.seuil_dotVSbig  = Math.max( 0, myPtx.seuil_dotVSbig + 1);
       else           myPtx.seuil_dotVSbig  = Math.max( 0, myPtx.seuil_dotVSbig - 1);
       myCam.updateImg();
-      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 2);
+      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 8);
       break;
 
     case 'R': case 'r':
       if(key == 'r') myPtx.seuil_lineVSfill  = Math.max( 0, myPtx.seuil_lineVSfill + 0.1);
       else           myPtx.seuil_lineVSfill  = Math.max( 0, myPtx.seuil_lineVSfill - 0.1);
       myCam.updateImg();
-      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 2);
+      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 8);
       break;
 
     case 'T': case 't':
       if(key == 't') myPtx.tooSmallContour  = Math.max( 0, myPtx.tooSmallContour + 1);
       else           myPtx.tooSmallContour  = Math.max( 0, myPtx.tooSmallContour - 1);
       myCam.updateImg();
-      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 2);
+      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 8);
       break;
 
     case 'Y': case 'y':
       if(key == 'y') myPtx.tooSmallSurface  = Math.max( 0, myPtx.tooSmallSurface + 1);
       else           myPtx.tooSmallSurface  = Math.max( 0, myPtx.tooSmallSurface - 1);
       myCam.updateImg();
-      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 2);
+      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 8);
       break;
 
 
@@ -1355,13 +1346,27 @@ public class ptx_inter {
 
     if (key == CODED && myCam.dotIndex != -1 ) { // conditions should be separated...
       switch(keyCode) {
-      case UP    : myCam.ROI[myCam.dotIndex].y -= 1; break;
-      case DOWN  : myCam.ROI[myCam.dotIndex].y += 1; break;
-      case LEFT  : myCam.ROI[myCam.dotIndex].x -= 1; break;
-      case RIGHT : myCam.ROI[myCam.dotIndex].x += 1; break;
+      case UP    :
+				myCam.ROI[myCam.dotIndex].y -= 1;
+				calculateHomographyMatrice(wFrameFbo, hFrameFbo, myCam.ROI);
+				scanCam();
+				break;
+      case DOWN  :
+				myCam.ROI[myCam.dotIndex].y += 1;
+				calculateHomographyMatrice(wFrameFbo, hFrameFbo, myCam.ROI);
+				scanCam();
+				break;
+      case LEFT  :
+				myCam.ROI[myCam.dotIndex].x -= 1;
+				calculateHomographyMatrice(wFrameFbo, hFrameFbo, myCam.ROI);
+				scanCam();
+				break;
+      case RIGHT :
+				myCam.ROI[myCam.dotIndex].x += 1;
+				calculateHomographyMatrice(wFrameFbo, hFrameFbo, myCam.ROI);
+				scanCam();
+				break;
       }
-      calculateHomographyMatrice(wFrameFbo, hFrameFbo, myCam.ROI);
-      scanCam();
     }
 
   }

@@ -50,7 +50,7 @@ class toggle {
   }   
 
   boolean getState() { 
-    if (!active) return false; 
+    if (!active) return state; 
     update(); 
     return state;
   }
