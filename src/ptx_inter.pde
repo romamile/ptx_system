@@ -841,7 +841,6 @@ public class ptx_inter {
         switch (myCamState) {
         case CAMERA_WHOLE:  
           imgTuto = tutoMap.get("F3_1_whole");
-          image(imgTuto, width / 2 - 550*0.9, height / 2 - 340.f, imgTuto.width, imgTuto.height);
           break;
         case CAMERA_ROI:
           imgTuto = tutoMap.get("F3_2_roi");
@@ -871,7 +870,11 @@ public class ptx_inter {
       }
     }
 
-    mFbo.image(imgTuto, wFrameFbo / 2 - 550*0.9, hFrameFbo / 2 - 340.f, imgTuto.width, imgTuto.height);
+		if(myGlobState != globState.CAMERA || myCamState != cameraState.CAMERA_WHOLE) {
+    	mFbo.image(imgTuto, wFrameFbo / 2 - 600*0.9, hFrameFbo / 2 - 340.f, imgTuto.width, imgTuto.height);
+		} else {
+    	image(imgTuto, width / 2 - 600*0.9, height / 2 - 340.f, imgTuto.width, imgTuto.height);
+		}
 
 		// Version
     mFbo.textFont(fDef);
