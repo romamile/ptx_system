@@ -986,12 +986,19 @@ public class ptx_inter {
 
     histoConfig.setInt("redMin", myPtx.listZone.get(0).getMin());
     histoConfig.setInt("redMax", myPtx.listZone.get(0).getMax());
+    histoConfig.setInt("redProto", myPtx.listZone.get(0).getProto());
+
     histoConfig.setInt("greenMin", myPtx.listZone.get(1).getMin());
     histoConfig.setInt("greenMax", myPtx.listZone.get(1).getMax());
+    histoConfig.setInt("greenProto", myPtx.listZone.get(1).getProto());
+
     histoConfig.setInt("blueMin", myPtx.listZone.get(2).getMin());
     histoConfig.setInt("blueMax", myPtx.listZone.get(2).getMax());
+    histoConfig.setInt("blueProto", myPtx.listZone.get(2).getProto());
+
     histoConfig.setInt("yellowMin", myPtx.listZone.get(3).getMin());
     histoConfig.setInt("yellowMax", myPtx.listZone.get(3).getMax());
+    histoConfig.setInt("yellowProto", myPtx.listZone.get(3).getProto());
 
     config.setJSONObject("histogram", histoConfig);
 
@@ -1077,10 +1084,10 @@ public class ptx_inter {
     JSONObject histoConfig = config.getJSONObject("histogram"); 
 
     myPtx.listZone.clear();
-    myPtx.listZone.add( new hueInterval( histoConfig.getInt("redMin"), histoConfig.getInt("redMax") ) );
-    myPtx.listZone.add( new hueInterval( histoConfig.getInt("greenMin"), histoConfig.getInt("greenMax") ) );
-    myPtx.listZone.add( new hueInterval( histoConfig.getInt("blueMin"), histoConfig.getInt("blueMax") ) );
-    myPtx.listZone.add( new hueInterval( histoConfig.getInt("yellowMin"), histoConfig.getInt("yellowMax") ) );
+    myPtx.listZone.add( new hueInterval( histoConfig.getInt("redMin"),    histoConfig.getInt("redMax"),    histoConfig.getInt("redProto")  ) );
+    myPtx.listZone.add( new hueInterval( histoConfig.getInt("greenMin"),  histoConfig.getInt("greenMax"),  histoConfig.getInt("greenProto")  ) );
+    myPtx.listZone.add( new hueInterval( histoConfig.getInt("blueMin"),   histoConfig.getInt("blueMax"),   histoConfig.getInt("blueProto")  ) );
+    myPtx.listZone.add( new hueInterval( histoConfig.getInt("yellowMin"), histoConfig.getInt("yellowMax"), histoConfig.getInt("yellowProto")  ) );
 
       
       // 4] trapeze

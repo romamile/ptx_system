@@ -33,9 +33,11 @@
 public class hueInterval {
 	
 	public int a, b; // change names
+  public int proto;
 		
-	public hueInterval()				{ a = 10; b = 20; }
-	public hueInterval(int _a, int _b) { a = _a%360; b = _b%360; }
+	public hueInterval()				{ a = 10; b = 20; proto = 15;}
+	public hueInterval(int _a, int _b) { a = _a%360; b = _b%360; proto = 0;}
+	public hueInterval(int _a, int _b, int _proto) { a = _a%360; b = _b%360; proto = _proto%360;}
 
   /** 
   * Helper Function that returns the value of the A hue
@@ -60,6 +62,13 @@ public class hueInterval {
   * @return          <code>int</code> between 0 and 359.
   */
 	public int getMin() {return Math.min(a%360, b%360); }
+
+
+  /** 
+  * Helper Function that returns the value of the proto hue
+  * @return          <code>int</code> between 0 and 359.
+  */
+	public int getProto() {return proto%360; }
 
   /** 
   * Helper Function that returns the value of the centered hue

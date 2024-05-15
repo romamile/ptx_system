@@ -51,6 +51,7 @@ public class area {
 
   int id;
   int hue;
+  int protoHue;
   int colId;
   area_shape myShape;
 

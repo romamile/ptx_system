@@ -521,11 +521,13 @@ public class ptx {
         }
     }
 
-    //associateAreasWithColorId
+    //associateAreasWithColorId and prototype
     for (area it : listArea)
       for (int i = 0; i < listZone.size(); ++i)
-        if ( listZone.get(i).contains(it.hue) )
+        if ( listZone.get(i).contains(it.hue) ) {
           it.colId = i;
+          it.protoHue = listZone.get(i).proto;
+        }
 
     System.out.println("First nbr Area: " + listArea.size() );
   }
