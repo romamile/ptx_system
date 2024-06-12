@@ -20,6 +20,7 @@ class toggle {
   void tog() { 
     state = !state;
   }
+
   void set(boolean _state) { 
     state = _state;
   }
@@ -48,6 +49,11 @@ class toggle {
       state = !state;
     }
   }   
+
+
+  boolean isActive() {
+    return active;
+  }
 
   boolean getState() { 
     if (!active) return state; 

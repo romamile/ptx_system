@@ -19,6 +19,9 @@
 import processing.video.*;
 import java.io.InputStreamReader;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * This class aims at easing the process of capturing image
  * from the camera in processing, both in its setup and
@@ -44,6 +47,7 @@ public class cam {
   PImage mImgCroped;    // Image with trapeze done
   PImage mImgFilter;
   PImage mImgRez;
+  PImage mImgCoded;
 
   int wFbo, hFbo;
   int wCam, hCam;
@@ -54,6 +58,14 @@ public class cam {
   vec2f[] ROI;
   int dotIndex; // 0->3 & -1 == no editing
   float zoomCamera;
+
+
+  // max
+  int maxSaturation = -999;
+  int maxBrightness = -999;
+  int maxExposure = -999;
+  int maxContrast = -999;
+  int maxTemperature = -999;
 
   cam(boolean _withCamera) {
 
@@ -70,6 +82,7 @@ public class cam {
     mImgCroped = createImage(wFbo, hFbo, RGB);
     mImgFilter = createImage(wFbo, hFbo, RGB);
     mImgRez    = createImage(wFbo, hFbo, RGB);
+    mImgCoded = createImage(wFbo, hFbo, RGB);
 
     zoomCamera = 1;
     dotIndex = -1;
@@ -92,48 +105,8 @@ public class cam {
       }
     }
   }  
-/*
-  cam(int _w, int _h) {
-
-    withCamera = true;
-		isBrio = false;
-    wCam = 0;
-    hCam = 0;
-
-    wFbo = _w;
-    hFbo = _h;
-    camVideoId = -1;
-
-    ROI = new vec2f[4];
-    mImg = createImage(wFbo, hFbo, RGB);
-    mImgCroped = createImage(wFbo, hFbo, RGB);
-    mImgFilter = createImage(wFbo, hFbo, RGB);
-    mImgRez    = createImage(wFbo, hFbo, RGB);
-
-    zoomCamera = min(width*1.f/wFbo, height*1.f/hFbo);
-
-    dotIndex = -1;
-    ROI[0] = new vec2f(200, 200);
-    ROI[1] = new vec2f(400, 200);
-    ROI[2] = new vec2f(400, 400);
-    ROI[3] = new vec2f(200, 400);
 
 
-    String[] cameras = Capture.list();
-    if (cameras.length == 0) {
-      println("There are no cameras available for capture.");
-      exit();
-    } else {
-      println("Available cameras:");
-      for (int i = 0; i < cameras.length; i++) {
-				if(cameras[i].contains("BRIO"))
-					isBrio = true;
-        println(i + ", " + cameras[i]);
-      }
-    }
-    
-  }
-*/
   /** 
    * Functions that let the user resize the fbo which defines the 
    * playfield.
@@ -149,6 +122,7 @@ public class cam {
     mImgCroped = createImage(wFbo, hFbo, RGB);
     mImgFilter = createImage(wFbo, hFbo, RGB);
     mImgRez    = createImage(wFbo, hFbo, RGB);
+    mImgCoded = createImage(wFbo, hFbo, RGB);
   }
 
   /** 
@@ -242,11 +216,8 @@ public class cam {
       return;
     JSONObject camConfig = loadJSONObject("data/config.json").getJSONObject("camera"); 
 
-		if(isBrio) {
-			modCam("set", "exposure_time_absolute", floor(camConfig.getFloat("exposure")) );
-		} else {
-			modCam("set", "exposure_absolute", floor(camConfig.getFloat("exposure")) );
-		}
+		modCam("set", "exposure_time_absolute", floor(camConfig.getFloat("exposure")) );
+		//modCam("set", "exposure_absolute", floor(camConfig.getFloat("exposure")) );
 
     modCam("set", "saturation", floor(camConfig.getFloat("saturation")) );
     modCam("set", "brightness", floor(camConfig.getFloat("brightness")) );
@@ -266,10 +237,62 @@ public class cam {
 			modCam("set", "auto_exposure", 1);
 			modCam("set", "exposure_dynamic_framerate", 0);
 		} else {
-			modCam("set", "white_balance_temperature_auto", 0);
-			modCam("set", "exposure_auto", 1);
-			modCam("set", "exposure_auto_priority", 0);
+			//modCam("set", "white_balance_temperature_auto", 0);
+			//modCam("set", "exposure_auto", 1);
+			//modCam("set", "exposure_auto_priority", 0);
+
+			modCam("set", "white_balance_automatic", 0);
+			modCam("set", "auto_exposure", 1);
+			modCam("set", "exposure_dynamic_framerate", 0);
 		}
+
+
+    // max
+    String regex = "max=(\\d+)";
+    Pattern pattern = Pattern.compile(regex);
+
+    ArrayList<String> listMaxStr = exeMult("v4l2-ctl -d /dev/video" + camVideoId + " --list-ctrls");
+
+      for (int i = 0; i < listMaxStr.size(); ++i) {
+
+        if(listMaxStr.get(i).contains("brightness") ){
+          Matcher matcher = pattern.matcher(listMaxStr.get(i));
+          if (matcher.find()) {
+             maxBrightness = Integer.parseInt(matcher.group(1));
+          }
+        }
+ 
+        if(listMaxStr.get(i).contains("contrast") ){
+          Matcher matcher = pattern.matcher(listMaxStr.get(i));
+          if (matcher.find()) {
+             maxContrast = Integer.parseInt(matcher.group(1));
+          }
+        }
+
+        if(listMaxStr.get(i).contains("saturation") ) {
+          Matcher matcher = pattern.matcher(listMaxStr.get(i));
+          if (matcher.find()) {
+             maxSaturation = Integer.parseInt(matcher.group(1));
+          }
+        }
+
+        if(listMaxStr.get(i).contains("white_balance_temperature") ) {
+          Matcher matcher = pattern.matcher(listMaxStr.get(i));
+          if (matcher.find()) {
+             maxTemperature = Integer.parseInt(matcher.group(1));
+          }
+        }
+
+        if(listMaxStr.get(i).contains("exposure_time_absolute") ) {
+          Matcher matcher = pattern.matcher(listMaxStr.get(i));
+          if (matcher.find()) {
+             maxExposure = Integer.parseInt(matcher.group(1));
+          }
+        }
+
+      }
+
+
  
   }
   
@@ -296,6 +319,7 @@ public class cam {
 
       mImg = cpt.copy();
       mImgCroped = createImage(wFbo, hFbo, RGB);
+      mImgCoded = createImage(wFbo, hFbo, RGB);
       return true;
     }
     return false;

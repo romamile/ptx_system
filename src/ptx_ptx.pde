@@ -99,8 +99,6 @@ public class ptx {
 
     indexHue = 0;
 
-    //showPince = true;
-
     listZone.add(new hueInterval(350, 50));
     listZone.add(new hueInterval(90, 150));
     listZone.add(new hueInterval(210, 270));
@@ -133,7 +131,7 @@ public class ptx {
    * @param   _w           width of the image
    * @param   _h           height of the image
    */
-  public boolean parseImage(PImage in, PImage outFilter, PImage outRez, int _w, int _h, int stopAt) {
+  public boolean parseImage(PImage in, PImage outFilter, PImage outRez, PImage _mImgCoded, int _w, int _h, int stopAt) {
 
     System.out.println("----------------------------------");
     System.out.println("--- PARSE IMAGE ---");
@@ -149,7 +147,7 @@ public class ptx {
     if(stopAt == 0) return true;
 
     // 1) ISOLATE PIXELS OF INTEREST
-    if ( ! isolateForeground(in, outFilter, outRez))
+    if ( ! isolateForeground(in, outFilter, outRez, _mImgCoded))
       return false;
     System.out.println("1) Isolate foreground, in: " + (System.currentTimeMillis()-locStart) );
     locStart = System.currentTimeMillis();
@@ -260,11 +258,13 @@ public class ptx {
    * @param  _h          height of the image
    */
   //  public boolean isolateForeground(uint8_t* in, uint8_t* outFilter, uint8_t* outRez, int _w, int _h) {
-  public boolean isolateForeground(PImage in, PImage outFilter, PImage outRez) {
+  public boolean isolateForeground(PImage in, PImage outFilter, PImage outRez, PImage mImgCoded) {
     int sizeDrawing = 0;
     int hue;
 
     in.loadPixels();
+
+    mImgCoded.loadPixels();
 
     if(verboseImg) {
       outFilter.loadPixels();
@@ -272,7 +272,6 @@ public class ptx {
     }
     
     // temp
-    int marge = 7;
     ptx_color cTN, cT;
     cTN = new ptx_color();
 
@@ -283,9 +282,6 @@ public class ptx {
         // == Enough Color and not too White
            cT.r + cT.g + cT.b < seuilLuminance*3
         && cT.getS() >= seuilSaturation 
-        
-        // == Not on the surface of the pince
-        //&& (!showPince || (i / _w > heightPince + marge || i%_w < _w/2 - widthPince/2 - marge || i%_w > _w/2 + widthPince/2 + marge ))
         // == Not touching the edge (because of potential issue wiwth the turtle algo for contour)
         &&  i/ ww != 0 && i/ ww != hh-1 && i%ww != 0 && i%ww != ww-1 // FOR NOW
         // == Margin of scan, because always some issues around...
@@ -310,10 +306,22 @@ public class ptx {
             outFilter.pixels[i] = color(60);
             outRez.pixels[i] = color(60);
           }
+
+          mImgCoded.pixels[i] = 0xFF000000;
+
         } else {
           // GOOD
           sizeDrawing++;
           ids[i] = hueRef[hue];
+
+          for(int iB = 0; iB < listZone.size(); ++iB)
+            if(hueRef[hue] == listZone.get(iB).getRef())
+              switch(iB) {
+              case 0: mImgCoded.pixels[i] = 0xFFFF0000; break;
+              case 1: mImgCoded.pixels[i] = 0xFF00FF00; break;
+              case 2: mImgCoded.pixels[i] = 0xFF0000FF; break;
+              case 3: mImgCoded.pixels[i] = 0xFFFFFF00; break;
+              }
 
           pixest.add(new vec2i(i%ww, i / ww));
 
@@ -323,6 +331,7 @@ public class ptx {
           }
         }
         idsArea[i] = -1;
+
       } else {
         // BAD
         ids[i] = -1;
@@ -332,6 +341,8 @@ public class ptx {
           outFilter.pixels[i] = color(0);
           outRez.pixels[i] = 0;
         }
+        
+        mImgCoded.pixels[i] = 0xFF000000;
       }
     }
 
@@ -350,6 +361,8 @@ public class ptx {
       outRez.updatePixels();
     }
     
+    mImgCoded.updatePixels();
+
     return true;
   }
 

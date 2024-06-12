@@ -63,8 +63,20 @@ public class ptx_inter {
   cam myCam;
   ptx myPtx;
   
-  boolean shiftPressed;
 
+  // Keyboard
+  boolean shiftPressed;
+  boolean ctrlPressed;
+	boolean buttLongPressed;
+	int buttLongFreq = 10;
+	int currButtLong = 0;
+
+	// should be a static variable of area...
+	boolean protoCol = false;
+
+  // old from root
+  char scanKey = 'a';
+  boolean isScanning = false, isInConfig = false, scanOrGameStation = true;
 
   // Scan
   int grayLevelUp, grayLevelDown;
@@ -117,6 +129,8 @@ public class ptx_inter {
     toggleThread.setSpanMs(1000);
     
     shiftPressed = false;
+    ctrlPressed = false;
+    buttLongPressed = false;
 
     
 //    hFrameFbo = 757;
@@ -142,8 +156,8 @@ public class ptx_inter {
     whiteCtp = 0;
 
     ks = new Keystone(_myParent);
-    surface = ks.createCornerPinSurface(wFrameFbo, hFrameFbo, 20);
-    
+    surface = ks.createCornerPinSurface(wFrameFbo, hFrameFbo, 23);
+   
 
     // Creation of a config file in case one isn't present
     File f = new File(dataPath("config.json"));
@@ -223,7 +237,7 @@ public class ptx_inter {
   void scanClr() {
 
     myCam.updateImg();
-    myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 99);
+    myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, myCam.mImgCoded, wFrameFbo, hFrameFbo, 99);
 //    atScan();
   }
 
@@ -248,8 +262,8 @@ public class ptx_inter {
     mFbo.fill(255);
     mFbo.textAlign(LEFT);
 
-    myPtxInter.mFbo.imageMode(CORNER);
-    myPtxInter.mFbo.rectMode(CORNER);
+    mFbo.imageMode(CORNER);
+    mFbo.rectMode(CORNER);
 
     mFbo.background(30);
 
@@ -262,10 +276,6 @@ public class ptx_inter {
         break;
       case CAMERA:
         renderCamera(); 
-        if (debugType != 0 && myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE) { // display UI directly on screen   
-            textAlign(LEFT);
-            text("F3: CAMERA 1/2 - WHOLE", 20, 40);
-          }
         break;
       case RECOG:
         renderRecog();
@@ -281,9 +291,7 @@ public class ptx_inter {
      
     mFbo.endDraw();
 
-    if (! (myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE) || isScanning ) {
-        displayFBO();
-    }
+    displayFBO();
 
   }
   
@@ -296,45 +304,29 @@ public class ptx_inter {
     if(togUI.getState()) {
         // UI high level
         
-        if(myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE) { // display UI directly on screen   
-          fill(colUI[0], colUI[1], colUI[2]);     
-          textAlign(CENTER);
-          text(strUI, width/2, height/2 - 100);           
-        } else { // display UI in FBO
+        //if(myGlobState == globState.CAMERA && myCamState == cameraState.CAMERA_WHOLE) { // display UI directly on screen   
+        //  fill(colUI[0], colUI[1], colUI[2]);     
+        //  textAlign(CENTER);
+        //  text(strUI, width/2, height/2 - 100);           
+        //} else { // display UI in FBO
           mFbo.fill(colUI[0], colUI[1], colUI[2]);     
           mFbo.textAlign(CENTER);
-          mFbo.text(strUI, myPtxInter.mFbo.width/2, myPtxInter.mFbo.height/2 - 100);
-        }
+          mFbo.text(strUI, mFbo.width/2, mFbo.height/2 - 100);
+        //}
     } else {
         togUI.stop(false); 
     } 
   }
 
-  void postGameDraw() {
-
-    mFbo.textFont(fDef); textFont(fGlob);
-    mFbo.textSize(28);   textSize(28);
-    if(togUI.getState()) {
-        // UI high level
-        if(myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE) { // display UI directly on screen   
-          fill(colUI[0], colUI[1], colUI[2]);     
-          textAlign(CENTER);
-          text(strUI, width/2, height/2 - 100); 
-        } else { // display UI in FBO
-          mFbo.fill(colUI[0], colUI[1], colUI[2]);     
-          mFbo.textAlign(CENTER);
-          mFbo.text(strUI, myPtxInter.mFbo.width/2, myPtxInter.mFbo.height/2 - 100);
-        }
-    } else {
-        togUI.stop(false); 
-    }
-
-  }
 
   /** 
    * Sub renderer function, to display the Mire
    */
   void renderMire() {  // F2
+
+    mFbo.background(0);
+
+		if( !showTutorial ) { // BUG processing, with lines and image in FBO
 
     mFbo.stroke(250);
     mFbo.strokeWeight(2);
@@ -348,8 +340,8 @@ public class ptx_inter {
     }
 
     //Bords
-    mFbo.vertex(0, hFrameFbo -3); 
-    mFbo.vertex(wFrameFbo, hFrameFbo -3);
+    mFbo.vertex(0, hFrameFbo -2); 
+    mFbo.vertex(wFrameFbo, hFrameFbo -2);
 
     mFbo.vertex(0, 2);
     mFbo.vertex(wFrameFbo, 2);
@@ -373,8 +365,10 @@ public class ptx_inter {
 
     mFbo.endShape();
 
+		} // BUG processing, with lines and image in FBO
+
     mFbo.stroke(255);
-    
+
     if (debugType != 0) {
       mFbo.text("F2: MIRE - CALIBRATING", 20, 40); 
     }
@@ -391,47 +385,53 @@ public class ptx_inter {
    */
   void renderCamera() { // F3
 
+    background(0);
+
     switch (myCamState) {
     case CAMERA_WHOLE: // Show the whole view of the camera
-      push();
+      mFbo.push();
       
-      scale(myCam.zoomCamera);
-      image(myCam.mImg, 0, 0);
-      strokeWeight(2/myCam.zoomCamera);
-      stroke(255, 130);
-      noFill();
-      beginShape();
-      vertex(myCam.ROI[0].x, myCam.ROI[0].y);
-      vertex(myCam.ROI[1].x, myCam.ROI[1].y);
-      vertex(myCam.ROI[2].x, myCam.ROI[2].y);
-      vertex(myCam.ROI[3].x, myCam.ROI[3].y);
-      endShape(CLOSE);
+      mFbo.scale(myCam.zoomCamera);
+      mFbo.image(myCam.mImg, 0, 0);
+      mFbo.strokeWeight(2/myCam.zoomCamera);
+      mFbo.stroke(255, 130);
+      mFbo.noFill();
+			
+			if( !showTutorial ) { // BUG processing, with lines and image in FBO
+      mFbo.beginShape();
+      mFbo.vertex(myCam.ROI[0].x, myCam.ROI[0].y);
+      mFbo.vertex(myCam.ROI[1].x, myCam.ROI[1].y);
+      mFbo.vertex(myCam.ROI[2].x, myCam.ROI[2].y);
+      mFbo.vertex(myCam.ROI[3].x, myCam.ROI[3].y);
+      mFbo.endShape(CLOSE);
       
       
       if(myCam.dotIndex != -1) {
         float radius = 20/myCam.zoomCamera;
-        stroke(255, 200);
-        ellipse(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y, radius, radius);
-        ellipse(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y, 2*radius, 2*radius);
-        stroke(255, 50);
-        line(myCam.ROI[myCam.dotIndex].x - radius, myCam.ROI[myCam.dotIndex].y, myCam.ROI[myCam.dotIndex].x + radius, myCam.ROI[myCam.dotIndex].y);
-        line(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y - radius, myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y + radius);
+        mFbo.stroke(255, 200);
+        mFbo.ellipse(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y, radius, radius);
+        mFbo.ellipse(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y, 2*radius, 2*radius);
+        mFbo.stroke(255, 50);
+        mFbo.line(myCam.ROI[myCam.dotIndex].x - radius, myCam.ROI[myCam.dotIndex].y, myCam.ROI[myCam.dotIndex].x + radius, myCam.ROI[myCam.dotIndex].y);
+        mFbo.line(myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y - radius, myCam.ROI[myCam.dotIndex].x, myCam.ROI[myCam.dotIndex].y + radius);
       }
+			} // BUG processing, with lines and image in FBO
       
-      
+      mFbo.pushStyle();
+        mFbo.fill(255,130);
+        mFbo.textSize(32);
+        mFbo.textAlign(CENTER);
+        mFbo.text( "Top Left",  myCam.ROI[0].x - 50, myCam.ROI[0].y - 50);
+        mFbo.text( "Top Right", myCam.ROI[1].x + 50, myCam.ROI[1].y - 50);
+      mFbo.popStyle();
+
+      mFbo.fill(255);
+      mFbo.pop();
+
+
       if (debugType != 0) {
-        pushStyle();
-          fill(255,130);
-          textSize(18/myCam.zoomCamera);
-          textAlign(CENTER);
-          text( "TopLeft", myCam.ROI[0].x - 50, myCam.ROI[0].y - 50);
-          text( "TopRight", myCam.ROI[1].x + 50, myCam.ROI[1].y - 50);
-        popStyle();
-      }
-
-
-      fill(255);
-      pop();
+        mFbo.text("F3: CAMERA 1/2 - WHOLE", 20, 40);
+			}
       
       break;
 
@@ -439,6 +439,7 @@ public class ptx_inter {
 
       mFbo.image(myCam.mImgCroped, 0, 0);
 
+			if( !showTutorial ) { // BUG processing, with lines and image in FBO
       mFbo.stroke(0);
       mFbo.strokeWeight(1);
       mFbo.beginShape(LINES);
@@ -482,6 +483,7 @@ public class ptx_inter {
       case 3: mFbo.ellipse(0, hFrameFbo, radiusROI, radiusROI); break;
       }
       mFbo.strokeWeight(1);
+			} // BUG processing, with lines and image in FBO
 
       if (debugType != 0)
         mFbo.text("F3: CAMERA 2/2 - ROI", 20, 40);
@@ -541,7 +543,6 @@ public class ptx_inter {
 
     case RECOG_COL:
       mFbo.image(myCam.mImgRez, 0, 0);
-
 
       //Color Wheel
       mFbo.colorMode(HSB, 360);
@@ -704,20 +705,21 @@ public class ptx_inter {
         mFbo.vertex(wFrameFbo, hFrameFbo / 6.f*i);
       }
 
-      //Bords
-      mFbo.vertex(0, hFrameFbo-1); 
-      mFbo.vertex(wFrameFbo-1, hFrameFbo-1);
+			//Bords
+			mFbo.vertex(0, hFrameFbo -2); 
+			mFbo.vertex(wFrameFbo, hFrameFbo -2);
 
-      mFbo.vertex(0, 0);
-      mFbo.vertex(wFrameFbo-1, 0);
+			mFbo.vertex(0, 2);
+			mFbo.vertex(wFrameFbo, 2);
 
-      mFbo.vertex(0, 0);
-      mFbo.vertex(0, hFrameFbo-1);
+			mFbo.vertex(2, 0);
+			mFbo.vertex(2, hFrameFbo);
 
-      mFbo.vertex(wFrameFbo-1, 0);
-      mFbo.vertex(wFrameFbo-1, hFrameFbo-1);
+			mFbo.vertex(wFrameFbo - 2, 0);
+			mFbo.vertex(wFrameFbo - 2, hFrameFbo);
 
-      mFbo.endShape();
+			mFbo.endShape();
+
     } else {
       
       mFbo.beginShape(TRIANGLE_FAN);
@@ -762,11 +764,8 @@ public class ptx_inter {
 
     //Values
     int debugExposure = -999;
-    if(myCam.isBrio) {
-      debugExposure = myCam.modCam("get", "exposure_time_absolute", 0);
-    } else {
-      debugExposure = myCam.modCam("get", "exposure_absolute", 0);
-    }
+    debugExposure = myCam.modCam("get", "exposure_time_absolute", 0);
+    //debugExposure = myCam.modCam("get", "exposure_absolute", 0);
 
     String debugStr = "\n"
       + " --- Flash\n"
@@ -775,40 +774,40 @@ public class ptx_inter {
       + "i - Margin: "     + myPtx.margeScan + "\n\n"
 
       + "--- Filtering\n"
-      + " a - Luminance: " + myPtx.seuilLuminance + "\n"
-      + " z - Saturation: " + int(100*myPtx.seuilSaturation)/100.0 + "\n"
+      + " a - Luminance: " + myPtx.seuilLuminance + " / 255\n"
+      + " z - Saturation: " + int(100*myPtx.seuilSaturation)/100.0 + " / 1.0\n"
       + " e - dot VS big: " + myPtx.seuil_dotVSbig + "\n"
       + " r - line VS fill: " + myPtx.seuil_lineVSfill + "\n"
       + " t - tooSmall Contour: " + myPtx.tooSmallContour + "\n"
       + " y - tooSmall Surface: " + myPtx.tooSmallSurface + "\n\n"
 
       + "--- Camera\n"
-      + " d - Exposure  : "   + debugExposure + "\n"
-      + " f - Saturation  : " + myCam.modCam("get", "saturation", 0)  + "\n"
-      + " g - Brightness  : " + myCam.modCam("get", "brightness", 0) + "\n"
-      + " h - Contrast    : " + myCam.modCam("get", "contrast", 0) + "\n"
-      + " j - Temperature : " + myCam.modCam("get", "white_balance_temperature", 0) + "\n"
+      + " d - Exposure  : "   + debugExposure + " / " + myCam.maxExposure + "\n"
+      + " f - Saturation  : " + myCam.modCam("get", "saturation", 0) + " / " + myCam.maxSaturation + "\n"
+      + " g - Brightness  : " + myCam.modCam("get", "brightness", 0) + " / " + myCam.maxBrightness + "\n"
+      + " h - Contrast    : " + myCam.modCam("get", "contrast", 0) + " / " + myCam.maxContrast + "\n"
+      + " j - Temperature : " + myCam.modCam("get", "white_balance_temperature", 0) + " / " + myCam.maxTemperature + "\n"
       + " c - zoom : "        + myCam.zoomCamera + "\n";
 
 
     if (debugType == 2) {
-      if (myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE && !isScanning ) {
-        textAlign(LEFT);
-        text(debugStr, 20, 80);    
-      } else {
+      //if (myGlobState == globState.CAMERA && myCamState == cameraState.CAMERA_WHOLE && !isScanning ) {
+      //  textAlign(LEFT);
+      //  text(debugStr, 20, 80);    
+      //} else {
         mFbo.textAlign(LEFT);
         mFbo.text(debugStr, 20, 80);
-      }
+      //}
     } 
 
     if (debugType == 3) {
-      if (myPtxInter.myGlobState == globState.CAMERA && myPtxInter.myCamState == cameraState.CAMERA_WHOLE && !isScanning ) {
-        textAlign(RIGHT);
-        text(debugStr, wFrameFbo - 20, 80);
-      } else {
+      //if (myGlobState == globState.CAMERA && myCamState == cameraState.CAMERA_WHOLE && !isScanning ) {
+      //  textAlign(RIGHT);
+      //  text(debugStr, wFrameFbo - 20, 80);
+      //} else {
         mFbo.textAlign(RIGHT);
         mFbo.text(debugStr, wFrameFbo - 20, 80);
-      }
+      //}
     } 
 
     mFbo.textAlign(LEFT);
@@ -870,11 +869,11 @@ public class ptx_inter {
       }
     }
 
-		if(myGlobState != globState.CAMERA || myCamState != cameraState.CAMERA_WHOLE) {
+		//if(myGlobState != globState.CAMERA || myCamState != cameraState.CAMERA_WHOLE) {
     	mFbo.image(imgTuto, wFrameFbo / 2 - 600*0.9, hFrameFbo / 2 - 340.f, imgTuto.width, imgTuto.height);
-		} else {
-    	image(imgTuto, width / 2 - 600*0.9, height / 2 - 340.f, imgTuto.width, imgTuto.height);
-		}
+		//} else {
+    //	image(imgTuto, width / 2 - 600*0.9, height / 2 - 340.f, imgTuto.width, imgTuto.height);
+		//}
 
 		// Version
     mFbo.textFont(fDef);
@@ -957,11 +956,8 @@ public class ptx_inter {
     camConfig.setInt("height", myCam.hCam);
     camConfig.setInt("enabled", myCam.withCamera ? 1 : 0);
 
-    if(myCam.isBrio) {
-      camConfig.setInt("exposure", myCam.modCam("get", "exposure_time_absolute", 0) );
-    } else {
-      camConfig.setInt("exposure", myCam.modCam("get", "exposure_absolute", 0) );
-    }
+    camConfig.setInt("exposure", myCam.modCam("get", "exposure_time_absolute", 0) );
+    //camConfig.setInt("exposure", myCam.modCam("get", "exposure_absolute", 0) );
     camConfig.setInt("saturation", myCam.modCam("get", "saturation", 0) );
     camConfig.setInt("brightness", myCam.modCam("get", "brightness", 0) );
     camConfig.setInt("contrast", myCam.modCam("get", "contrast", 0) );
@@ -1002,6 +998,8 @@ public class ptx_inter {
     histoConfig.setInt("yellowMin", myPtx.listZone.get(3).getMin());
     histoConfig.setInt("yellowMax", myPtx.listZone.get(3).getMax());
     histoConfig.setInt("yellowProto", myPtx.listZone.get(3).getProto());
+
+    histoConfig.setInt("enableProto", protoCol ? 1 : 0); // static variable
 
     config.setJSONObject("histogram", histoConfig);
 
@@ -1052,19 +1050,13 @@ public class ptx_inter {
     ks.load("./data/configKeyStone.xml");
 
     // Load PTX config
-    
     JSONObject config = loadJSONObject(_filePath);
-
 
       // 1] Camera
     JSONObject camConfig = config.getJSONObject("camera"); 
 
-    if(myCam.isBrio) {
-      myCam.modCam("set", "exposure_time_absolute", floor(camConfig.getFloat("exposure")) );
-    } else {
-      myCam.modCam("set", "exposure_absolute", floor(camConfig.getFloat("exposure")) );
-    }
-
+    myCam.modCam("set", "exposure_time_absolute", floor(camConfig.getFloat("exposure")) );
+    //myCam.modCam("set", "exposure_absolute", floor(camConfig.getFloat("exposure")) );
     myCam.modCam("set", "saturation", floor(camConfig.getFloat("saturation")) );
     myCam.modCam("set", "brightness", floor(camConfig.getFloat("brightness")) );
     myCam.modCam("set", "contrast",   floor(camConfig.getFloat("contrast")) );
@@ -1091,6 +1083,9 @@ public class ptx_inter {
     myPtx.listZone.add( new hueInterval( histoConfig.getInt("greenMin"),  histoConfig.getInt("greenMax"),  histoConfig.getInt("greenProto")  ) );
     myPtx.listZone.add( new hueInterval( histoConfig.getInt("blueMin"),   histoConfig.getInt("blueMax"),   histoConfig.getInt("blueProto")  ) );
     myPtx.listZone.add( new hueInterval( histoConfig.getInt("yellowMin"), histoConfig.getInt("yellowMax"), histoConfig.getInt("yellowProto")  ) );
+
+		
+    protoCol = histoConfig.getInt("enableProto") == 1; // static variable
 
       
       // 4] trapeze
@@ -1123,9 +1118,15 @@ public class ptx_inter {
   }
 
   void managementKeyReleased() {
-   if(keyCode == SHIFT) {
-     shiftPressed = false;
-   }
+    if(keyCode == SHIFT) {
+      shiftPressed = false;
+	    return;
+    }
+
+    if(keyCode == CONTROL) {
+      ctrlPressed = false;
+	    return;
+    }
 
     switch(keyCode) {
     case (KeyEvent.VK_F9-15):
@@ -1141,8 +1142,14 @@ public class ptx_inter {
     if(keyCode == SHIFT) {
       shiftPressed = true;
     }
+
+		if(keyCode == CONTROL) {
+			ctrlPressed = true;
+		}
+
   
     switch(keyCode) {
+			// MODES
     case (KeyEvent.VK_F1-15):
       isInConfig = false;
       myPtx.verboseImg = false;
@@ -1156,10 +1163,7 @@ public class ptx_inter {
       isInConfig = true;
       myPtx.verboseImg = true;
       myCam.dotIndex = -1;
-      if(ks.isCalibrating())
-        cursor();
-      else
-        noCursor();
+      cursor();
       myGlobState = globState.MIRE;
       break;
     case (KeyEvent.VK_F3-15):
@@ -1178,10 +1182,8 @@ public class ptx_inter {
           break;
         }
       }
-      
       if (myCam.dotIndex == -1)
         myCam.dotIndex = 0;
-
       myGlobState = globState.CAMERA;
       break;
     case (KeyEvent.VK_F4-15):
@@ -1203,28 +1205,40 @@ public class ptx_inter {
       myGlobState = globState.RECOG;
       break;
 
-    case (KeyEvent.VK_F5-15):
+
+			// EXPORT
+    case (KeyEvent.VK_F5-15): // Debug export
+    	if(ctrlPressed) {
+      	if(shiftPressed) {
+				} else {
+        	myCam.mImgCroped.save("./drawings/img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
+				}
+    	}
+      break;
+
+    case (KeyEvent.VK_F6-15): // Game Station
+    	if(ctrlPressed) {
+      	if(shiftPressed) {
+        	saveDataToGameStation();
+				} else {
+      		loadDataFromGameStation();
+				}
+    	}
+      break;
+
+
+			// HELP
+    case (KeyEvent.VK_F7-15):
       cursor();
       debugType = (debugType + 1) % 4; 
       break;
     
-    case (KeyEvent.VK_F6-15):
-      loadFromGameStation();
-      break;
-
-    case (KeyEvent.VK_F7-15):
-      if(shiftPressed) {
-        myCam.mImgCroped.save("./drawings/img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
-      } else {
-        saveToGameStation();
-      }
-      break;
-
-    case (KeyEvent.VK_F9-15):
+    case (KeyEvent.VK_F8-15):
       showTutorial = true;
       break;  
 
-     case (KeyEvent.VK_F10-15): case (KeyEvent.VK_F10):
+			// SCAN
+    case (KeyEvent.VK_F10-15): case (KeyEvent.VK_F10):
       if (!isScanning) {
         ks.stopCalibration();
         whiteCtp = 0;
@@ -1234,13 +1248,113 @@ public class ptx_inter {
     }
   }
 
+  void continousKeyPressed() {
+
+		if(!buttLongPressed)
+			return;
+
+		currButtLong = (currButtLong + 1) % buttLongFreq;
+		if(currButtLong != 0)
+			return;
+
+    switch(key) {
+			// Seuil
+		case 'a': myPtx.seuilLuminance  = Math.min(  255.f, myPtx.seuilLuminance + 1); break;
+		case 'A': myPtx.seuilLuminance  = Math.max(  0.f, myPtx.seuilLuminance - 1); break;
+
+		case 'z': myPtx.seuilSaturation  = Math.min( 1.f, myPtx.seuilSaturation + 0.01); break;
+    case 'Z': myPtx.seuilSaturation  = Math.max( 0.f, myPtx.seuilSaturation - 0.01); break;
+
+		case 'e': myPtx.seuil_dotVSbig  = Math.min( 1000, myPtx.seuil_dotVSbig + 1); break;
+    case 'E': myPtx.seuil_dotVSbig  = Math.max( 0, myPtx.seuil_dotVSbig - 1); break;
+
+		case 'r': myPtx.seuil_lineVSfill  = Math.min( 1000, myPtx.seuil_lineVSfill + 0.1); break;
+    case 'R': myPtx.seuil_lineVSfill  = Math.max( 0, myPtx.seuil_lineVSfill - 0.1); break;
+
+		case 't': myPtx.tooSmallContour  = Math.min( 1000, myPtx.tooSmallContour + 1); break;
+    case 'T': myPtx.tooSmallContour  = Math.max( 0, myPtx.tooSmallContour - 1); break;
+
+	  case 'y': myPtx.tooSmallSurface  = Math.min( 1000, myPtx.tooSmallSurface + 1); break;
+    case 'Y': myPtx.tooSmallSurface  = Math.max( 0, myPtx.tooSmallSurface - 1); break;
+
+
+    // Flash
+    case 'P': grayLevelUp     = Math.max(  0, grayLevelUp     - 3); break;
+    case 'p': grayLevelUp     = Math.min(255, grayLevelUp     + 3); break;
+    case 'O': grayLevelDown   = Math.max(  0, grayLevelDown   - 3); break;
+    case 'o': grayLevelDown   = Math.min(255, grayLevelDown   + 3); break;
+    case 'I': myPtx.margeScan = Math.max(  0, myPtx.margeScan - 1); break;
+    case 'i': myPtx.margeScan = Math.min(200, myPtx.margeScan + 1); break;
+
+
+    // Camera
+    case 'd': 
+      myCam.modCam("add", "exposure_time_absolute",  10);
+      //myCam.modCam("add", "exposure_absolute",  10);
+      myCam.update();
+      break;
+    case 'D': 
+      myCam.modCam("add", "exposure_time_absolute",  -10);
+      //myCam.modCam("add", "exposure_absolute",  -10);
+      myCam.update();
+      break;
+    case 'f': myCam.modCam("add", "saturation",  2); myCam.update();        				 break;
+    case 'F': myCam.modCam("add", "saturation", -2); myCam.update();        				 break;
+    case 'g': myCam.modCam("add", "brightness",  2); myCam.update();        				 break;
+    case 'G': myCam.modCam("add", "brightness", -2); myCam.update();        				 break;
+    case 'h': myCam.modCam("add", "contrast",  2); myCam.update();          				 break;
+    case 'H': myCam.modCam("add", "contrast", -2); myCam.update();          				 break;
+    case 'j': myCam.modCam("add", "white_balance_temperature", 50); myCam.update(); break;
+    case 'J': myCam.modCam("add", "white_balance_temperature", -50); myCam.update();break;
+
+
+    // Histogram
+    case 'S': case 's':
+      if (myPtx.indexHue%2 != 0)
+        myPtx.listZone.get(myPtx.indexHue/2).b =
+          (myPtx.listZone.get(myPtx.indexHue/2).b + (key == 's' ? 359 : 1) )%360;
+      else
+        myPtx.listZone.get(myPtx.indexHue/2).a =
+          (myPtx.listZone.get(myPtx.indexHue/2).a + (key == 's' ? 359 : 1) )%360;
+      break;
+
+    case 'Q': case 'q':
+      myPtx.indexHue = (myPtx.indexHue + (key == 'q' ? 1 : 7))%8;
+      break;
+
+
+      // Trapeze
+    case 'C': myCam.zoomCamera*=1.02;       break;
+    case 'c': myCam.zoomCamera/=1.02;       break;
+
+    case ' ': myCam.dotIndex = (myCam.dotIndex + 1)%4; break;
+
+    }
+
+    if (key == CODED && myCam.dotIndex != -1 ) { // conditions should be separated...
+      switch(keyCode) {
+      case UP:    myCam.ROI[myCam.dotIndex].y -= 1; break;
+      case DOWN:  myCam.ROI[myCam.dotIndex].y += 1; break;
+      case LEFT:  myCam.ROI[myCam.dotIndex].x -= 1; break;
+      case RIGHT:	myCam.ROI[myCam.dotIndex].x += 1; break;
+      }
+    }
+
+  }
   /** 
    * Ptx KeyPressed function that highjack most of the keys you could use.
    * Only triggered when in recognision mode.
    */
   void keyPressed() {
 
-    float rotVal = 0.01;
+    if(keyCode == SHIFT) {
+      shiftPressed = false;
+	    return;
+    }
+
+		buttLongPressed = true;
+		currButtLong = -1;
+
 
     switch(key) {
     //Save/Load Config
@@ -1248,6 +1362,7 @@ public class ptx_inter {
     case 'x': loadConfig("data/config.json"); notify("Config Loaded!", 255, 255, 255); break;
     case 'X': loadConfig("data/config_ref_1.json"); notify("Config Loaded!", 255, 255, 255); break;
 
+/*
     // Seuil
     case 'A': case 'a':
       if(key == 'a') myPtx.seuilLuminance  = Math.max(  0.f, myPtx.seuilLuminance + 1);
@@ -1262,7 +1377,6 @@ public class ptx_inter {
       myCam.updateImg();
       myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, wFrameFbo, hFrameFbo, 2);
       break;
-    
     case 'E': case 'e':
       if(key == 'e') myPtx.seuil_dotVSbig  = Math.max( 0, myPtx.seuil_dotVSbig + 1);
       else           myPtx.seuil_dotVSbig  = Math.max( 0, myPtx.seuil_dotVSbig - 1);
@@ -1303,19 +1417,13 @@ public class ptx_inter {
 
     // Camera
     case 'd': 
-      if(myCam.isBrio) {
-        myCam.modCam("add", "exposure_time_absolute",  10);
-      } else {
-        myCam.modCam("add", "exposure_absolute",  10);
-      }
+      myCam.modCam("add", "exposure_time_absolute",  10);
+      //myCam.modCam("add", "exposure_absolute",  10);
       myCam.update();
       break;
     case 'D': 
-      if(myCam.isBrio) {
-        myCam.modCam("add", "exposure_time_absolute",  -10);
-      } else {
-        myCam.modCam("add", "exposure_absolute",  -10);
-      }
+      myCam.modCam("add", "exposure_time_absolute",  -10);
+      //myCam.modCam("add", "exposure_absolute",  -10);
       myCam.update();
       break;
     case 'f': myCam.modCam("add", "saturation",  2);         myCam.update(); break;
@@ -1352,8 +1460,10 @@ public class ptx_inter {
 
     case ' ': myCam.dotIndex = (myCam.dotIndex + 1)%4; break;
 
+*/  
     }
 
+/*
     if (key == CODED && myCam.dotIndex != -1 ) { // conditions should be separated...
       switch(keyCode) {
       case UP    :
@@ -1378,51 +1488,145 @@ public class ptx_inter {
 				break;
       }
     }
-
+*/
   }
-  
+
+
+  void keyReleased() {
+    if(keyCode == SHIFT) {
+      shiftPressed = false;
+	    return;
+    }
+
+		buttLongPressed = false;
+
+    switch(key) {
+    // Seuil
+    case 'A': case 'a': case 'Z': case 'z':
+      myCam.updateImg();
+      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, myCam.mImgCoded, wFrameFbo, hFrameFbo, 2);
+    case 'E': case 'e':
+    case 'R': case 'r':
+    case 'T': case 't':
+    case 'Y': case 'y':
+      myCam.updateImg();
+      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, myCam.mImgCoded, wFrameFbo, hFrameFbo, 8);
+      break;
+
+    // Camera
+    case 'd': case 'D': 
+    case 'f': case 'F': 
+    case 'g': case 'G': 
+    case 'h': case 'H': 
+    case 'j': case 'J': 
+      myCam.update();
+      break;
+
+    // Histogram
+    case 'S': case 's':
+      myCam.updateImg();
+      myPtx.parseImage(myCam.mImgCroped, myCam.mImgFilter, myCam.mImgRez, myCam.mImgCoded, wFrameFbo, hFrameFbo, 2);
+      break;
+
+ 		} 
+
+    if (key == CODED && myCam.dotIndex != -1 ) { // conditions should be separated...
+      switch(keyCode) {
+      case UP    :
+      case DOWN  :
+      case LEFT  :
+      case RIGHT :
+				calculateHomographyMatrice(wFrameFbo, hFrameFbo, myCam.ROI);
+				scanCam();
+				break;
+      }
+    }
+	}
+
   // GAME STATION
   
   void loadFromGameStation() {
     // 1) get list of file in directory
     String fPath = sketchPath() + "/F6_game_station";
-    //ArrayList<String> listFileStr = myCam.exeMult("ls "+fPath);
-    //fIndex = (fIndex + 1)%listFileStr.size();
-    //fName = listFileStr.get(fIndex);
-//    String filePath = "./F6_game_station/" + fName;
-
-      
     File folder = new File(fPath);
     File[] files = folder.listFiles();
       
-  
+    // 2) select the "next one"
     fIndex = (fIndex + 1)%files.length;
     fName = files[fIndex].toString();
-
-//      for(int i = 0; i<listFileStr.size(); ++i) println(listFileStr.get(i));
-
-    // 2) select the "next one"
     String filePath = fName;
 
-//      if(shiftPressed) {
-//        filePath = fName;
-//        myCam.mImgCroped.save("./drawings/img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
-//      } else {
-      filePath = fName;
-//      }
     // 3) launch
     myCam.mImgCroped = loadImage(filePath);
 
-    myCam.mImgFilter.copy(myPtxInter.myCam.mImgCroped, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo);
-    myCam.mImgRez.copy(myPtxInter.myCam.mImgCroped, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo);
-    myCam.mImgCroped = createImage(myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, RGB);
-    myCam.mImgCroped.copy(myPtxInter.myCam.mImgFilter, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo, 0, 0, myPtxInter.myCam.wFbo, myPtxInter.myCam.hFbo);
+    myCam.mImgFilter.copy(myCam.mImgCroped, 0, 0, myCam.wFbo, myCam.hFbo, 0, 0, myCam.wFbo, myCam.hFbo);
+    myCam.mImgRez.copy(myCam.mImgCroped, 0, 0, myCam.wFbo, myCam.hFbo, 0, 0, myCam.wFbo, myCam.hFbo);
+    myCam.mImgCroped = createImage(myCam.wFbo, myCam.hFbo, RGB);
+    myCam.mImgCroped.copy(myCam.mImgFilter, 0, 0, myCam.wFbo, myCam.hFbo, 0, 0, myCam.wFbo, myCam.hFbo);
 
     scanClr();
     atScan();
-    println(fName);
  
     strUI = "Loaded -=" + fName + " =- from GameStation!";
+    togUI.reset(true);
+
+  }
+  
+  void saveDataToGameStation() {
+    myCam.mImgCoded.save("./F6_game_station/game_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
+    strUI = "Saved Data to GameStation!";
+    togUI.reset(true);
+  }
+  
+  void loadDataFromGameStation() {
+    // 1) get list of file in directory
+    String fPath = sketchPath() + "/F6_game_station";
+    File folder = new File(fPath);
+    File[] files = folder.listFiles();
+      
+    // 2) select the "next one"
+    fIndex = (fIndex + 1)%files.length;
+    fName = files[fIndex].toString();
+    String filePath = fName;
+
+    myCam.mImgCoded = loadImage(filePath);
+
+		// 3) Code to image
+
+		//TODO => we should just have a method of myCam to handle that)
+
+		myCam.mImgCoded.loadPixels();
+		myCam.mImgCroped.loadPixels();
+
+
+    for (int i = 0; i < myCam.mImgCoded.width * myCam.mImgCoded.height; i++) {
+    	colorMode(RGB, 255);
+			int r = Math.round( red(myCam.mImgCoded.pixels[i]) );
+			int g = Math.round( green(myCam.mImgCoded.pixels[i]) );
+			int b = Math.round( blue(myCam.mImgCoded.pixels[i]) );
+
+    	colorMode(HSB, 360);
+			if(r ==   0 && g ==   0 && b ==   0) myCam.mImgCroped.pixels[i] = 0xFF000000;
+			if(r == 255 && g ==   0 && b ==   0) myCam.mImgCroped.pixels[i] = color(myPtx.listZone.get(0).getProto(), 360, 360);
+			if(r ==   0 && g == 255 && b ==   0) myCam.mImgCroped.pixels[i] = color(myPtx.listZone.get(1).getProto(), 360, 360);
+			if(r ==   0 && g ==   0 && b == 255) myCam.mImgCroped.pixels[i] = color(myPtx.listZone.get(2).getProto(), 360, 360);
+			if(r == 255 && g == 255 && b ==   0) myCam.mImgCroped.pixels[i] = color(myPtx.listZone.get(3).getProto(), 360, 360);
+		}
+		// Update the pixels array
+		myCam.mImgCoded.updatePixels();
+		myCam.mImgCroped.updatePixels();
+    colorMode(RGB, 255);
+
+    // 3) launch
+    myCam.mImgFilter.copy(myCam.mImgCroped, 0, 0, myCam.wFbo, myCam.hFbo, 0, 0, myCam.wFbo, myCam.hFbo);
+    myCam.mImgRez.copy(myCam.mImgCroped, 0, 0, myCam.wFbo, myCam.hFbo, 0, 0, myCam.wFbo, myCam.hFbo);
+    myCam.mImgCroped = createImage(myCam.wFbo, myCam.hFbo, RGB);
+    myCam.mImgCroped.copy(myCam.mImgFilter, 0, 0, myCam.wFbo, myCam.hFbo, 0, 0, myCam.wFbo, myCam.hFbo);
+
+    scanClr();
+    atScan();
+ 
+    strUI = "Loaded -=" + fName + " =- data from GameStation!";
     togUI.reset(true);
 
   }
@@ -1433,5 +1637,145 @@ public class ptx_inter {
     strUI = "Saved to GameStation!";
     togUI.reset(true);
   }
-  
+
+
+  // PRE and POST DRAW
+
+  boolean preDraw() {
+
+    if (isScanning) {
+      background(0);
+      generalRender(); 
+
+      if(!withFlash) {
+        myCam.update();
+        scanCam();
+        if (myPtxInter.myGlobState != globState.CAMERA) {
+          scanClr();
+          atScan();
+        }
+        whiteCtp = 0;
+        isScanning = false;
+      
+      } else { // WITH FLASH
+
+        if (myPtxInter.whiteCtp > 15 && myPtxInter.whiteCtp < 30)
+          myCam.update();
+
+        if (whiteCtp > 35) {
+          myCam.update();
+          scanCam();
+          
+          if (myPtxInter.myGlobState != globState.CAMERA) {
+            scanClr();
+            atScan();
+          }
+
+          whiteCtp = 0;
+          isScanning = false;
+          if(myGlobState == globState.MIRE)
+            ks.startCalibration();
+        }
+
+      }
+      
+
+      return false;
+    }
+
+    if (isInConfig) {
+      background(0);
+      continousKeyPressed();
+      generalRender();
+      return false;
+    }
+
+    return true;
+  }
+
+
+  boolean postDraw() {
+    displayTutorial();
+    showNotification();
+    mFbo.endDraw();
+    displayFBO();
+    return true;
+  }
+
+
+  // Handling keyboard and mouse
+
+  void keyPressedRoot() {
+
+    // Forbid any change it you're in the middle of scanning
+    if (isScanning) {
+      return;
+    }
+
+    managementKeyPressed();
+
+    if (isInConfig) {
+      keyPressed();
+      return;
+    }
+
+     
+    // Master key #2 / 2, that launch the scanning process
+    if (key == scanKey && !isScanning) {
+      if(scanOrGameStation) {
+        whiteCtp = 0;
+        isScanning = true;
+      } else {
+        saveToGameStation();
+      }
+      return;
+    }
+
+  }
+
+  void mousePressed() {
+
+    PVector surMouse = surface.getTransformedMouse();
+    vec2f mousePos = new vec2f( surMouse.x/myCam.zoomCamera,
+                                surMouse.y/myCam.zoomCamera);
+
+    if (isInConfig && myGlobState == globState.CAMERA  && myCamState == cameraState.CAMERA_WHOLE && mouseButton == LEFT) {
+
+      // Select one "dot" of ROI if close enough
+      myCam.dotIndex = -1;
+      for(int i = 0; i < 4; ++i) {
+        if( (myCam.ROI[i].subTo( mousePos ).length()) < 50 ) {
+          myCam.dotIndex = i;
+        }
+        
+      }
+    }
+
+  }
+
+  void mouseDragged() {
+
+    PVector surMouse = surface.getTransformedMouse();
+    vec2f mousePos = new vec2f( surMouse.x/myCam.zoomCamera,
+                                surMouse.y/myCam.zoomCamera);
+
+      if (isInConfig && myGlobState == globState.CAMERA) {
+         if (myCam.dotIndex != -1) {
+           //myCam.ROI[myCam.dotIndex].addMe( new vec2f(mouseX-pmouseX, mouseY - pmouseY) ); 
+           myCam.ROI[myCam.dotIndex] = mousePos; 
+         }
+      }
+
+  }
+
+  void mouseReleased() {
+    
+    if (isInConfig && myGlobState == globState.CAMERA  && myCamState == cameraState.CAMERA_WHOLE)
+         if (myCam.dotIndex != -1) {
+           calculateHomographyMatrice(wFrameFbo, hFrameFbo, myCam.ROI);
+           scanCam();
+         }
+         
+  }
+
 }

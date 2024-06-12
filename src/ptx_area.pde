@@ -52,6 +52,7 @@ public class area {
   int id;
   int hue;
   int protoHue;
+
   int colId;
   area_shape myShape;
 
@@ -117,6 +118,14 @@ public class area {
       c = a.c;
       s = a.s;
     } 
+
+  public int getHue() {
+    if(myPtxInter.protoCol)
+      return protoHue;
+    else
+      return hue;
+
+  }
 
   public void createPShape() {
     c = new ptx_color();
