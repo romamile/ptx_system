@@ -111,8 +111,8 @@ public class ptx_inter {
     myRecogState = recogState.RECOG_FLASH;
     myCamState =  cameraState.CAMERA_WHOLE;
 
-    fDef = createFont("./data/MonospaceTypewriter.ttf", 28);
-    fGlob = createFont("./data/MonospaceTypewriter.ttf", 28);
+    fDef = createFont("./ptx_system/assets/MonospaceTypewriter.ttf", 28);
+    fGlob = createFont("./ptx_system/assets/MonospaceTypewriter.ttf", 28);
     debugType = 1;
 
     tutoMap = new HashMap<String, PImage>();
