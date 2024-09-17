@@ -42,8 +42,8 @@ public enum cameraState { CAMERA_WHOLE, CAMERA_ROI };
 public class ptx_inter {
 
 	// Version
-	String[] version = {"0","8","0"};
-	String[] versionExp = {"1","0","0", "Exp"};
+  String[] version = {"0","8","0"};
+  String[] versionExp = {"1","0","0", "Exp"};
 
   // The states
   globState myGlobState;  
@@ -67,12 +67,12 @@ public class ptx_inter {
   // Keyboard
   boolean shiftPressed;
   boolean ctrlPressed;
-	boolean buttLongPressed;
-	int buttLongFreq = 10;
-	int currButtLong = 0;
+  boolean buttLongPressed;
+  int buttLongFreq = 10;
+  int currButtLong = 0;
 
-	// should be a static variable of area...
-	boolean protoCol = false;
+  // should be a static variable of area...
+  boolean protoCol = false;
 
   // old from root
   char scanKey = 'a';
@@ -111,8 +111,8 @@ public class ptx_inter {
     myRecogState = recogState.RECOG_FLASH;
     myCamState =  cameraState.CAMERA_WHOLE;
 
-    fDef = createFont("./data/MonospaceTypewriter.ttf", 28);
-    fGlob = createFont("./data/MonospaceTypewriter.ttf", 28);
+    fDef = createFont("./ptx_system/assets/MonospaceTypewriter.ttf", 28);
+    fGlob = createFont("./ptx_system/assets/MonospaceTypewriter.ttf", 28);
     debugType = 1;
 
     tutoMap = new HashMap<String, PImage>();
@@ -878,9 +878,10 @@ public class ptx_inter {
 		// Version
     mFbo.textFont(fDef);
 		mFbo.textSize(22);
-		mFbo.text("PTX system - v" + version[0] + "." + version[1] + "." + version[2], 20, hFrameFbo - 30);
-
-		mFbo.text(versionExp[3] + " - v" + versionExp[0]+ "." + versionExp[1] + "." + versionExp[2], 20, hFrameFbo - 70);
+		mFbo.text("PTX system - v" + version[0] + "." + version[1] + "." + version[2],
+                   wFrameFbo / 2 - 600*0.9 + 50, hFrameFbo / 2 - 340.f + imgTuto.height - 30);
+		mFbo.text(versionExp[3] + " - v" + versionExp[0]+ "." + versionExp[1] + "." + versionExp[2],
+                   wFrameFbo / 2 - 600*0.9 + 50, hFrameFbo / 2 - 340.f + imgTuto.height - 70);
   }
 
   /** 
@@ -1117,7 +1118,7 @@ public class ptx_inter {
 
   }
 
-  void managementKeyReleased() {
+  void keyReleasedManagement() {
     if(keyCode == SHIFT) {
       shiftPressed = false;
 	    return;
@@ -1129,7 +1130,7 @@ public class ptx_inter {
     }
 
     switch(keyCode) {
-    case (KeyEvent.VK_F9-15):
+    case (KeyEvent.VK_F8-15):
       showTutorial = false;
       break;  
     }
@@ -1137,7 +1138,7 @@ public class ptx_inter {
   }
     
     
-  void managementKeyPressed() {      // MANAGEMENT KEYS (FK_F** - 5), the -5 is here because of a weird behavior of P3D for keymanagement
+  void keyPressedManagement() {      // MANAGEMENT KEYS (FK_F** - 5), the -5 is here because of a weird behavior of P3D for keymanagement
 
     if(keyCode == SHIFT) {
       shiftPressed = true;
@@ -1209,21 +1210,21 @@ public class ptx_inter {
 			// EXPORT
     case (KeyEvent.VK_F5-15): // Debug export
     	if(ctrlPressed) {
-      	if(shiftPressed) {
-				} else {
-        	myCam.mImgCroped.save("./drawings/img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png");
-				}
+      	  if(shiftPressed) {
+            saveToDrawing();
+		  } else {
+		  }
     	}
       break;
 
     case (KeyEvent.VK_F6-15): // Game Station
-    	if(ctrlPressed) {
-      	if(shiftPressed) {
-        	saveDataToGameStation();
-				} else {
-      		loadDataFromGameStation();
-				}
-    	}
+      if(ctrlPressed) {
+        if(shiftPressed) {
+          saveDataToGameStation();
+	    } else {
+      	  loadDataFromGameStation();
+		}
+      }
       break;
 
 
@@ -1250,31 +1251,31 @@ public class ptx_inter {
 
   void continousKeyPressed() {
 
-		if(!buttLongPressed)
-			return;
+    if(!buttLongPressed)
+      return;
 
-		currButtLong = (currButtLong + 1) % buttLongFreq;
-		if(currButtLong != 0)
-			return;
+	currButtLong = (currButtLong + 1) % buttLongFreq;
+	if(currButtLong != 0)
+	  return;
 
     switch(key) {
 			// Seuil
-		case 'a': myPtx.seuilLuminance  = Math.min(  255.f, myPtx.seuilLuminance + 1); break;
-		case 'A': myPtx.seuilLuminance  = Math.max(  0.f, myPtx.seuilLuminance - 1); break;
+	case 'a': myPtx.seuilLuminance  = Math.min(  255.f, myPtx.seuilLuminance + 1); break;
+	case 'A': myPtx.seuilLuminance  = Math.max(  0.f, myPtx.seuilLuminance - 1); break;
 
-		case 'z': myPtx.seuilSaturation  = Math.min( 1.f, myPtx.seuilSaturation + 0.01); break;
+	case 'z': myPtx.seuilSaturation  = Math.min( 1.f, myPtx.seuilSaturation + 0.01); break;
     case 'Z': myPtx.seuilSaturation  = Math.max( 0.f, myPtx.seuilSaturation - 0.01); break;
 
-		case 'e': myPtx.seuil_dotVSbig  = Math.min( 1000, myPtx.seuil_dotVSbig + 1); break;
+	case 'e': myPtx.seuil_dotVSbig  = Math.min( 1000, myPtx.seuil_dotVSbig + 1); break;
     case 'E': myPtx.seuil_dotVSbig  = Math.max( 0, myPtx.seuil_dotVSbig - 1); break;
 
-		case 'r': myPtx.seuil_lineVSfill  = Math.min( 1000, myPtx.seuil_lineVSfill + 0.1); break;
+	case 'r': myPtx.seuil_lineVSfill  = Math.min( 1000, myPtx.seuil_lineVSfill + 0.1); break;
     case 'R': myPtx.seuil_lineVSfill  = Math.max( 0, myPtx.seuil_lineVSfill - 0.1); break;
 
-		case 't': myPtx.tooSmallContour  = Math.min( 1000, myPtx.tooSmallContour + 1); break;
+	case 't': myPtx.tooSmallContour  = Math.min( 1000, myPtx.tooSmallContour + 1); break;
     case 'T': myPtx.tooSmallContour  = Math.max( 0, myPtx.tooSmallContour - 1); break;
 
-	  case 'y': myPtx.tooSmallSurface  = Math.min( 1000, myPtx.tooSmallSurface + 1); break;
+	case 'y': myPtx.tooSmallSurface  = Math.min( 1000, myPtx.tooSmallSurface + 1); break;
     case 'Y': myPtx.tooSmallSurface  = Math.max( 0, myPtx.tooSmallSurface - 1); break;
 
 
@@ -1291,21 +1292,23 @@ public class ptx_inter {
     case 'd': 
       myCam.modCam("add", "exposure_time_absolute",  10);
       //myCam.modCam("add", "exposure_absolute",  10);
-      myCam.update();
+      if(!withFlash)
+        myCam.update();
       break;
     case 'D': 
       myCam.modCam("add", "exposure_time_absolute",  -10);
       //myCam.modCam("add", "exposure_absolute",  -10);
-      myCam.update();
+      if(!withFlash)
+        myCam.update();
       break;
-    case 'f': myCam.modCam("add", "saturation",  2); myCam.update();        				 break;
-    case 'F': myCam.modCam("add", "saturation", -2); myCam.update();        				 break;
-    case 'g': myCam.modCam("add", "brightness",  2); myCam.update();        				 break;
-    case 'G': myCam.modCam("add", "brightness", -2); myCam.update();        				 break;
-    case 'h': myCam.modCam("add", "contrast",  2); myCam.update();          				 break;
-    case 'H': myCam.modCam("add", "contrast", -2); myCam.update();          				 break;
-    case 'j': myCam.modCam("add", "white_balance_temperature", 50); myCam.update(); break;
-    case 'J': myCam.modCam("add", "white_balance_temperature", -50); myCam.update();break;
+    case 'f': myCam.modCam("add", "saturation",  2);                 if(!withFlash) myCam.update(); break;
+    case 'F': myCam.modCam("add", "saturation", -2);                 if(!withFlash) myCam.update(); break;
+    case 'g': myCam.modCam("add", "brightness",  2);                 if(!withFlash) myCam.update(); break;
+    case 'G': myCam.modCam("add", "brightness", -2);                 if(!withFlash) myCam.update(); break;
+    case 'h': myCam.modCam("add", "contrast",  2);                   if(!withFlash) myCam.update(); break;
+    case 'H': myCam.modCam("add", "contrast", -2);                   if(!withFlash) myCam.update(); break;
+    case 'j': myCam.modCam("add", "white_balance_temperature", 50);  if(!withFlash) myCam.update(); break;
+    case 'J': myCam.modCam("add", "white_balance_temperature", -50); if(!withFlash) myCam.update(); break;
 
 
     // Histogram
@@ -1327,7 +1330,7 @@ public class ptx_inter {
     case 'C': myCam.zoomCamera*=1.02;       break;
     case 'c': myCam.zoomCamera/=1.02;       break;
 
-    case ' ': myCam.dotIndex = (myCam.dotIndex + 1)%4; break;
+    //case ' ': myCam.dotIndex = (myCam.dotIndex + 1)%4; break;
 
     }
 
@@ -1345,15 +1348,15 @@ public class ptx_inter {
    * Ptx KeyPressed function that highjack most of the keys you could use.
    * Only triggered when in recognision mode.
    */
-  void keyPressed() {
+  void keyPressedConfig() {
 
     if(keyCode == SHIFT) {
       shiftPressed = false;
 	    return;
     }
 
-		buttLongPressed = true;
-		currButtLong = -1;
+	buttLongPressed = true;
+	currButtLong = -1;
 
 
     switch(key) {
@@ -1458,9 +1461,9 @@ public class ptx_inter {
     case 'C': myCam.zoomCamera*=1.02;       break;
     case 'c': myCam.zoomCamera/=1.02;       break;
 
+*/  
     case ' ': myCam.dotIndex = (myCam.dotIndex + 1)%4; break;
 
-*/  
     }
 
 /*
@@ -1493,12 +1496,14 @@ public class ptx_inter {
 
 
   void keyReleased() {
+    myPtxInter.keyReleasedManagement();
+
     if(keyCode == SHIFT) {
       shiftPressed = false;
 	    return;
     }
 
-		buttLongPressed = false;
+	buttLongPressed = false;
 
     switch(key) {
     // Seuil
@@ -1544,7 +1549,16 @@ public class ptx_inter {
 	}
 
   // GAME STATION
-  
+
+  void saveToDrawing() {
+    
+    String nameOfFile = "img_"+month()+"-"+day()+"_"+hour()+"-"+minute()+"-"+second()+".png";
+    myCam.mImgCroped.save("./drawings/"+nameOfFile);
+    strUI = "Saved -= " + nameOfFile + " =- to Drawing Debug!";
+    togUI.reset(true);
+
+  }  
+
   void loadFromGameStation() {
     // 1) get list of file in directory
     String fPath = sketchPath() + "/F6_game_station";
@@ -1566,8 +1580,8 @@ public class ptx_inter {
 
     scanClr();
     atScan();
- 
-    strUI = "Loaded -=" + fName + " =- from GameStation!";
+
+    strUI = "Loaded -= " + files[fIndex].getName() + " =- from GameStation!";
     togUI.reset(true);
 
   }
@@ -1626,7 +1640,7 @@ public class ptx_inter {
     scanClr();
     atScan();
  
-    strUI = "Loaded -=" + fName + " =- data from GameStation!";
+    strUI = "Loaded -= " + files[fIndex].getName() + " =- data from GameStation!";
     togUI.reset(true);
 
   }
@@ -1641,7 +1655,7 @@ public class ptx_inter {
 
   // PRE and POST DRAW
 
-  boolean preDraw() {
+  void preDraw() {
 
     if (isScanning) {
       background(0);
@@ -1679,43 +1693,43 @@ public class ptx_inter {
 
       }
       
-
-      return false;
     }
 
     if (isInConfig) {
       background(0);
       continousKeyPressed();
       generalRender();
-      return false;
     }
 
-    return true;
   }
 
 
-  boolean postDraw() {
+  void postDraw() {
     displayTutorial();
     showNotification();
     mFbo.endDraw();
     displayFBO();
-    return true;
   }
 
 
   // Handling keyboard and mouse
 
-  void keyPressedRoot() {
+  boolean noGame() {
+    return isScanning || isInConfig;
+  }
+
+
+  void keyPressed() {
 
     // Forbid any change it you're in the middle of scanning
     if (isScanning) {
       return;
     }
 
-    managementKeyPressed();
+    keyPressedManagement();
 
     if (isInConfig) {
-      keyPressed();
+      keyPressedConfig();
       return;
     }
 
